@@ -42,6 +42,8 @@ E2E hesap oluşturma yalnız loopback ortamında ve açık test bayrağıyla ça
 
 Sürümler: Nuxt 4.6.2, Vue 3.5.44, Vue Router 5.4.0. Vue tip denetleyicisinin TypeScript 7 ile uyumsuzluğu nedeniyle desteklenen TypeScript 6.0.3 sabitlendi. pnpm lockfile ve `pnpm-workspace.yaml` saklanmalıdır; yalnız esbuild kurulum script'ine izin verilir.
 
+Cloudflare Pages için `pnpm build:pages`, `.pages-output/public` statik çıktısı ve aynı origin'deki API gateway Function'ı hazırlandı. [Pages kurulum ayarları](docs/cloudflare-pages.md).83 frontend testi, tip ve Pages artifact kontrolü geçti; gerçek yayın kabulü ayrıca gerekir.
+
 ## Ekranlar
 
 | Yol | Ekran |

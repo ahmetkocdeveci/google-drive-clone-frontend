@@ -1,11 +1,13 @@
 import { fileURLToPath } from 'node:url'
 
 export default defineNuxtConfig({
+  ...(process.env.DRIVE_PAGES_BUILD === '1' ? { buildDir: '.nuxt-pages' } : {}),
   compatibilityDate: '2026-10-16',
   ssr: false,
   devtools: { enabled: false },
   css: ['~/assets/css/main.css'],
   nitro: {
+    ...(process.env.DRIVE_PAGES_BUILD === '1' ? { output: { dir: fileURLToPath(new URL('./.pages-output/', import.meta.url)) } } : {}),
     publicAssets: ['cmaps', 'standard_fonts', 'wasm'].map(directory => ({
       dir: fileURLToPath(new URL(`./node_modules/pdfjs-dist/${directory}/`, import.meta.url)),
       baseURL: `/pdf-assets/${directory}`,

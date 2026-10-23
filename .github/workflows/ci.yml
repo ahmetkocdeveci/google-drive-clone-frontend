@@ -23,4 +23,5 @@ jobs:
       - run: pnpm test:e2e:types
       - run: pnpm build
       - run: pnpm check:runtime
+      - run: pnpm build:pages
       - run: docker build -t ortak-drive-frontend:ci .

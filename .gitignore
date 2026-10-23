@@ -1,6 +1,8 @@
 node_modules/
 .nuxt/
 .output/
+.pages-output/
+.nuxt-pages/
 .data/
 dist/
 .env

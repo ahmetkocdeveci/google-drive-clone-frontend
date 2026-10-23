@@ -21,7 +21,7 @@
     "check:runtime": "node scripts/check-runtime.mjs"
   },
   "dependencies": {
-    "nuxt": "4.6.1",
+    "nuxt": "4.6.2",
     "pdfjs-dist": "6.4.299",
     "vue": "3.5.44",
     "vue-router": "5.4.0"

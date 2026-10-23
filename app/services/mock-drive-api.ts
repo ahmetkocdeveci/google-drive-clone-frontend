@@ -170,6 +170,7 @@ export function createMockDriveApi(): DriveApi {
 
   const api: DriveApi = {
     async getAuthProviders(options) { checkAbort(options); return { google: false } },
+    async startGoogleSignIn(_input, options) { checkAbort(options); throw new ApiError(503, 'GOOGLE_NOT_CONFIGURED', 'Google ile giriş demo modunda kullanılamıyor.') },
     async getAuthIdentities(options) { checkAbort(options); const user = authenticated(); return { google: false, hasPassword: passwords.has(user.id) } },
     async startGoogleLink(_input, options) { checkAbort(options); authenticated(); throw new ApiError(503, 'GOOGLE_NOT_CONFIGURED', 'Google bağlantısı demo modunda kullanılamıyor.') },
     async requestPasswordReset(input, options) {

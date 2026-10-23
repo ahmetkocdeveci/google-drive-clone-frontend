@@ -47,6 +47,56 @@ function fixture(api: Partial<DriveApi>, initialUser: User | null = userA) {
   return { drive: useDrive(), state, route, navigations, notifications, restore }
 }
 
+function captureGoogleWindow(t: { after(callback: () => void): void }) {
+  const assigned: string[] = []
+  const previous = Object.getOwnPropertyDescriptor(globalThis, 'window')
+  Object.defineProperty(globalThis, 'window', { configurable: true, value: { location: { assign: (url: string) => assigned.push(url) } } })
+  t.after(() => { if (previous) Object.defineProperty(globalThis, 'window', previous); else delete (globalThis as unknown as Record<string, unknown>).window })
+  return assigned
+}
+
+test('Google sign-in sends pending invitation in the API body and navigates only to Google', async t => {
+  const assigned = captureGoogleWindow(t), token = 'a'.repeat(43)
+  let input: unknown
+  const setup = fixture({ getAuthProviders: async () => ({ google: true }), startGoogleSignIn: async body => { input = body; return { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?state=opaque' } } }, null)
+  t.after(setup.restore)
+  setup.state.get('pending-invitation-token')!.value = token
+  await setup.drive.googleSignIn('/invitations/accept')
+  assert.deepEqual(input, { returnTo: '/invitations/accept', invitationToken: token })
+  assert.deepEqual(assigned, ['https://accounts.google.com/o/oauth2/v2/auth?state=opaque'])
+  assert.ok(!assigned[0]!.includes(token))
+})
+
+test('a delayed Google provider response cannot start login for a replacement session', async t => {
+  const assigned = captureGoogleWindow(t), providers = deferred<{ google: boolean }>()
+  let started = false
+  const setup = fixture({ getAuthProviders: () => providers.promise, login: async () => ({ user: userB }), startGoogleSignIn: async () => { started = true; return { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth' } } }, null)
+  t.after(setup.restore)
+  const pending = setup.drive.googleSignIn()
+  await setup.drive.signIn({ email: userB.email, password: 'test-password' })
+  providers.resolve({ google: true }); await pending
+  assert.equal(started, false); assert.deepEqual(assigned, [])
+})
+
+test('replaced invitation context cannot navigate a delayed Google start', async t => {
+  const assigned = captureGoogleWindow(t), result = deferred<{ authorizationUrl: string }>(), started = deferred<void>()
+  const setup = fixture({ getAuthProviders: async () => ({ google: true }), startGoogleSignIn: async () => { started.resolve(); return result.promise } }, null)
+  t.after(setup.restore)
+  setup.state.get('pending-invitation-token')!.value = 'a'.repeat(43)
+  const pending = setup.drive.googleSignIn('/invitations/accept'); await started.promise
+  setup.state.get('pending-invitation-token')!.value = 'b'.repeat(43)
+  result.resolve({ authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth' }); await pending
+  assert.deepEqual(assigned, [])
+})
+
+test('Google start rejects an unexpected authorization destination', async t => {
+  const assigned = captureGoogleWindow(t)
+  const setup = fixture({ getAuthProviders: async () => ({ google: true }), startGoogleSignIn: async () => ({ authorizationUrl: 'https://attacker.example/collect' }) }, null)
+  t.after(setup.restore)
+  await assert.rejects(setup.drive.googleSignIn(), /Google ile giriş başlatılamadı/)
+  assert.deepEqual(assigned, [])
+})
+
 for (const replacement of [userB, userA]) {
   test(`a delayed 401 cannot sign out a replacement ${replacement === userA ? 'session for the same identity' : 'account'}`, async t => {
     const response = deferred<DriveNode[]>()

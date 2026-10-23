@@ -200,11 +200,18 @@ export function useDrive() {
   }
   async function googleSignIn(returnTo = '/workspaces') {
     if (mode.value === 'demo') { notify('Google ile giriş, gerçek backend bağlandığında kullanılabilecek.', 'info'); return }
+    const revision = sessionGeneration.value
+    const destination = /^\/(?!\/)/.test(returnTo) && !/[\\\u0000-\u0020\u007f]/.test(returnTo) ? returnTo : '/workspaces'
+    const invitationToken = destination === '/invitations/accept' ? pendingInvitation.value || undefined : undefined
+    const isCurrent = () => revision === sessionGeneration.value && (destination !== '/invitations/accept' || invitationToken === (pendingInvitation.value || undefined))
     const providers = await rawApi.getAuthProviders()
+    if (!isCurrent()) return
     if (!providers.google) { notify('Google ile giriş henüz kullanıma açılmadı. E-posta adresin ve şifrenle devam edebilirsin.', 'info'); return }
-    const destination = new URL(`${String(config.public.apiBase).replace(/\/$/, '')}/auth/google/start`, window.location.origin)
-    if (/^\/(?!\/)/.test(returnTo) && !/[\\\u0000-\u001f]/.test(returnTo)) destination.searchParams.set('returnTo', returnTo)
-    window.location.assign(destination.href)
+    const result = await rawApi.startGoogleSignIn({ returnTo: destination, ...(invitationToken ? { invitationToken } : {}) })
+    if (!isCurrent()) return
+    const authorization = new URL(result.authorizationUrl)
+    if (authorization.origin !== 'https://accounts.google.com' || authorization.pathname !== '/o/oauth2/v2/auth') throw new Error('Google ile giriş başlatılamadı.')
+    window.location.assign(authorization.href)
   }
   return {
     user, mode, initialized, initializationError, workspaces, workspaceNextCursor, workspaceLoadingMore, workspacePageError, currentWorkspace, workspaceAccessRevision, search, command, api, sessionRevision: computed(() => sessionGeneration.value),

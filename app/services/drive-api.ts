@@ -2,6 +2,7 @@ import type { ApiOptions, ArchiveOptions, AuditEvent, AuthIdentities, AuthProvid
 
 export interface DriveApi {
   getAuthProviders(options?: ApiOptions): Promise<AuthProviders>
+  startGoogleSignIn(input: { returnTo: string; invitationToken?: string }, options?: ApiOptions): Promise<{ authorizationUrl: string }>
   getAuthIdentities(options?: ApiOptions): Promise<AuthIdentities>
   startGoogleLink(input: { password?: string }, options?: ApiOptions): Promise<{ authorizationUrl: string }>
   requestPasswordReset(input: { email: string }, options?: ApiOptions): Promise<void>

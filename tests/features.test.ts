@@ -7,6 +7,22 @@ import type { ArchiveJob, DriveNode } from '../shared/types.ts'
 
 const failure = (status: number, code?: string) => (error: unknown) => error instanceof ApiError && error.status === status && (!code || error.code === code)
 
+test('Google invitation context uses credentialed CSRF-protected POST and never the request URL', async () => {
+  const calls: Array<{ url: string; init: RequestInit }> = []
+  const token = 'a'.repeat(43), controller = new AbortController()
+  const api = createHttpDriveApi({ baseUrl: 'http://api.test/api/v1', fetch: async (input, init) => {
+    const url = String(input); calls.push({ url, init: init! })
+    return Response.json(url.endsWith('/auth/csrf-token') ? { csrfToken: 'csrf-key' } : { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth' })
+  } })
+  await api.startGoogleSignIn({ returnTo: '/invitations/accept', invitationToken: token }, { signal: controller.signal })
+  assert.equal(calls.length, 2)
+  assert.ok(calls.every(call => !call.url.includes(token)))
+  assert.equal(calls[1]!.init.method, 'POST'); assert.equal(calls[1]!.init.credentials, 'include')
+  assert.equal((calls[1]!.init.headers as Record<string, string>)['X-CSRF-Token'], 'csrf-key')
+  assert.equal(calls[1]!.init.signal, controller.signal)
+  assert.deepEqual(JSON.parse(String(calls[1]!.init.body)), { returnTo: '/invitations/accept', invitationToken: token })
+})
+
 test('paged node listing reaches more than 500 entries without omissions or duplicates', async () => {
   const api = createMockDriveApi()
   for (let index = 0; index < 505; index++) await api.createFolder('ws-design', { parentId: null, name: `Folder ${String(index).padStart(4, '0')}` })

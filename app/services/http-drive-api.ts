@@ -108,6 +108,7 @@ export function createHttpDriveApi(config: HttpDriveApiOptions = {}): DriveApi {
 
   return {
     async getAuthProviders(options) { return request('/auth/providers', 'GET', undefined, options) },
+    async startGoogleSignIn(input, options) { return request('/auth/google/start', 'POST', input, options) },
     async getAuthIdentities(options) { return request('/auth/identities', 'GET', undefined, options) },
     async startGoogleLink(input, options) { return request('/auth/google/link/start', 'POST', input, options) },
     async requestPasswordReset(input, options) { await raw('/auth/password-reset/request', 'POST', input, options) },

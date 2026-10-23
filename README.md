@@ -40,7 +40,7 @@ E2E hesap oluşturma yalnız loopback ortamında ve açık test bayrağıyla ça
 
 `build`, Nuxt üretim çıktısını üretir. `generate`, statik SPA çıktısını `.output/public` klasörüne yazar. Ardından `preview:static`, çıktıyı `http://127.0.0.1:4179` adresinde sunar. Bu script backend değildir; `/api` isteklerine açık backend-bağlı-değil hatası döndürür. Statik host bilinmeyen uygulama yollarını `index.html` dosyasına yönlendirmelidir; API yollarını bu fallback'e yönlendirmeyin. Giriş ve davet sayfalarını doğrudan açma bununla çalışır. `pnpm preview`, `build` sonrasında Nuxt üretim sunucusunu yerelde açar.
 
-Sürümler: Nuxt 4.6.1, Vue 3.5.44, Vue Router 5.4.0. Vue tip denetleyicisinin TypeScript 7 ile uyumsuzluğu nedeniyle desteklenen TypeScript 6.0.3 sabitlendi. pnpm lockfile ve `pnpm-workspace.yaml` saklanmalıdır; yalnız esbuild kurulum script'ine izin verilir.
+Sürümler: Nuxt 4.6.2, Vue 3.5.44, Vue Router 5.4.0. Vue tip denetleyicisinin TypeScript 7 ile uyumsuzluğu nedeniyle desteklenen TypeScript 6.0.3 sabitlendi. pnpm lockfile ve `pnpm-workspace.yaml` saklanmalıdır; yalnız esbuild kurulum script'ine izin verilir.
 
 ## Ekranlar
 
@@ -105,7 +105,7 @@ tests/             Domain ve HTTP adapter testleri
 
 UI kontrolleri backend yetkilendirmesinin yerine geçmez. HTTP backend her istekte session, güncel üyelik, permission ve kaynak workspace sınırını uygulamalıdır. Frontend workspace değişiminde içerik durumunu temizler, liste isteklerini iptal eder ve geç gelen sonuçları kapsam kontrolüyle reddeder.
 
-Session/CSRF token'ları localStorage veya sessionStorage'a yazılmaz. Cookie oturumları backend tarafından HttpOnly/Secure/SameSite olarak ayarlanmalıdır. Davet ve doğrulama token'ları fragmentten okunup URL'den kaldırılır, yalnız bellekte tutulur. Tam sayfa Google girişi belleği yeniler; davetle giriş yapan kullanıcı davet bağlantısını tekrar açmalıdır. Backend OAuth state akışı ayrıca ele alınmalıdır.
+Session/CSRF token'ları localStorage veya sessionStorage'a yazılmaz. Cookie oturumları backend tarafından HttpOnly/Secure/SameSite olarak ayarlanmalıdır. Davet ve doğrulama token'ları fragmentten okunup URL'den kaldırılır, yalnız bellekte tutulur. Google girişi CSRF korumalı POST ile başlar. Bekleyen davet, backend'de 10 dakika geçerli, session/state'e bağlı şifreli OAuth kaydında korunur; callback fragment ile davet ekranına döner. Kullanıcı daveti ayrıca inceleyip kabul eder. İptal/yeniden deneme de daveti korur; tarayıcı depolaması veya Google URL'sine davet tokenı yazılmaz.
 
 Davet ve doğrulama ekranlarındaki “Başka hesapla giriş yap” düğmesi bekleyen bağlantıyı bellekte tutarak hesabı değiştirir. Genel çıkış düğmesi bekleyen bağlantıları da temizler. Yeni bir doğrulama tokenı açıldıysa, mevcut hesabın daha önce doğrulanmış olması bu bağlantıyı doğrulanmış saymaz; token API'de açıkça doğrulanır.
 
@@ -117,7 +117,7 @@ MongoDB, API güvenliği, audit, worker ve SMTP backend'de uygulanır. Yerel uyg
 
 Referanslar: [Nuxt static deployment](https://github.com/nuxt/nuxt/blob/main/docs/1.getting-started/16.deployment.md), [pnpm ayarları](https://pnpm.io/settings).
 
-Üretim Docker imajı yalnız `.output` taşır. `pnpm check:runtime` (önce `pnpm build`) bilinen iki sorunlu araç zinciri paketinin runtime'a girmesini engeller; CI ve Docker derlemesine bağlıdır. 21 Ekim kaynak taramasında `node-forge` ve `braces` için iki high bildirim kaydedildi; güncel durum yeni taramayla doğrulanmalıdır. [Güvenlik durumu ve resmi kaynaklar](docs/bagimlilik-guvenlik-durumu.md).
+Üretim Docker imajı yalnız `.output` taşır. `pnpm check:runtime` (önce `pnpm build`) bilinen iki sorunlu araç zinciri paketinin runtime'a girmesini engeller; CI ve Docker derlemesine bağlıdır. 23 Ekim taramasında Nuxt 4.6.2 güncellemesi sonrası 0 moderate ve 2 high bulgu kaldı. Yaması henüz bildirilmeyen `node-forge` ve `braces` araç zinciri bulguları izleniyor. [Güvenlik durumu ve resmi kaynaklar](docs/bagimlilik-guvenlik-durumu.md).
 
 
 ## Klasör yükleme ve dosyanın konumu
@@ -129,3 +129,7 @@ Sınırlar:10000 toplam öğe, hedef yol dahil64 seviye, dosya başına25 MiB; w
 Dosya ayrıntılarındaki **Bulunduğu klasör**, gerçek parent yolunu gösterir. **Klasöre git** arama/son kullanılanlardan da doğru konumu açar. Eski hesap/workspace'e ait geç gelen konum sonuçları yayınlanmaz.
 
 22 Ekim son kontrolleri: PDF renderer dahil68 frontend testi, Nuxt tip, E2E kaynak tip, üretim derlemesi ve runtime paket kontrolü geçti. Daha önce nested upload/Viewer reddi dahil2 gerçek API/MongoDB entegrasyon testi geçti. Kullanıcı yerel PDF, workspace ve rol kontrollerini manuel tamamladı; otomatik tarayıcı/erişilebilirlik senaryoları bu ortamda çalıştırılmadı.
+
+23 Ekim davet düzeltmesi: Google dönüşünde daveti tekrar yapıştırma gereksinimi kaldırıldı. 73 frontend testi ve Nuxt tip kontrolü geçti; backend'in 28 hedefli auth testinde session/state bağı, süre, replay, iptal, açık kabul ve CSRF doğrulandı. Yeni akışın manuel Google dönüşü kabulü ayrıca bekliyor.
+
+23 Ekim son yerel doğrulaması: Nuxt 4.6.2 üretim derlemesi, E2E kaynak tip kontrolü ve 21 manifest runtime sınırı kontrolü geçti; node-forge/braces üretim çıktısında bulunmadı. İlk derleme Windows EPERM nedeniyle durdu, aynı derleme gerekli izinlerle başarılı oldu. Outbox 0 pending/0 sending/0 failed iken backend yeni kodla yeniden başlatıldı; Atlas /health ok ve frontend 4179 dinleme kontrolü başarılı. Bu kontroller frontend sayfasını açma veya yeni Google akışının manuel kabulü değildir.

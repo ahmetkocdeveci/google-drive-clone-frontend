@@ -13,14 +13,19 @@ const showPassword = ref(false)
 const pending = ref(false)
 const error = ref(googleAuthErrorMessage(route.query.authError))
 const passwordReset = ref(route.query.passwordReset === 'success')
+const pendingInvitation = useState<string | null>('pending-invitation-token', () => null)
 
 onMounted(() => {
   const query = { ...route.query }
+  const fragment = new URLSearchParams(route.hash.slice(1))
+  const incomingInvitation = fragment.get('invitationToken')
+  if (query.returnTo === '/invitations/accept' && incomingInvitation && /^[A-Za-z0-9_-]{32,256}$/.test(incomingInvitation)) pendingInvitation.value = incomingInvitation
+  const hash = fragment.has('invitationToken') ? '' : route.hash
   if (googleAuthErrorMessage(query.authError)) delete query.authError
   if (query.passwordReset === 'success') delete query.passwordReset
-  if (Object.keys(query).length === Object.keys(route.query).length) return
+  if (Object.keys(query).length === Object.keys(route.query).length && hash === route.hash) return
   // Retain the pending invitation/verification destination while clearing the handled code.
-  void router.replace({ path: route.path, query, hash: route.hash })
+  void router.replace({ path: route.path, query, hash })
 })
 
 function destination() {
@@ -73,7 +78,7 @@ function fillDemo() {
     <button type="button" class="btn btn-secondary google-button" :disabled="pending" @click="withGoogle">
       <span class="google-g" aria-hidden="true">G</span> Google ile devam et
     </button>
-    <p v-if="String(route.query.returnTo || '').includes('/invitations/accept')" class="muted oauth-invitation-note">Google ile giriş yaptıktan sonra davet bağlantını yeniden aç.</p>
+    <p v-if="route.query.returnTo === '/invitations/accept'" class="muted oauth-invitation-note">Giriş yaptıktan sonra davetini inceleyip kabul edebilirsin.</p>
     <div class="divider"><span>veya e-posta ile</span></div>
 
     <form :aria-busy="pending" @submit.prevent="submit">

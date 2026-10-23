@@ -1,0 +1,36 @@
+{
+  "name": "google-drive-clone-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "engines": {
+    "node": ">=24.16.0"
+  },
+  "scripts": {
+    "dev": "nuxt dev --host 127.0.0.1 --port 4179",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview --host 127.0.0.1 --port 4179",
+    "preview:static": "node scripts/preview-static.mjs",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/session.test.ts tests/features.test.ts tests/audit.test.ts tests/folder-upload.test.ts tests/pdf-preview.test.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:types": "tsc -p tsconfig.e2e.json",
+    "test:e2e:a11y": "playwright test accessibility.spec.ts",
+    "check:runtime": "node scripts/check-runtime.mjs"
+  },
+  "dependencies": {
+    "nuxt": "4.6.1",
+    "pdfjs-dist": "6.4.299",
+    "vue": "3.5.44",
+    "vue-router": "5.4.0"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "24.19.2",
+    "typescript": "6.0.3",
+    "vue-tsc": "3.3.13"
+  }
+}

@@ -1,0 +1,146 @@
+import { test, expect } from '@playwright/test'
+import { fileURLToPath } from 'node:url'
+import { readFile } from 'node:fs/promises'
+import { createPreviewPdf } from '../fixtures/preview-pdf'
+import { apiBase, deleteWorkspace, mailLink, mutate, newWorkspace, openAs, requireTestEnvironment, verifiedAccount } from './helpers'
+
+test.beforeAll(requireTestEnvironment)
+
+test('directory picker preserves nested files and search details lead to the actual parent', async ({ page }) => {
+  const owner = await verifiedAccount('Directory'), workspace = await newWorkspace(owner.api, 'Directory')
+  try {
+    await openAs(page, owner.api, `/workspaces/${workspace.id}/files`)
+    await page.getByLabel('Yüklenecek klasörü seç', { exact: true }).setInputFiles(fileURLToPath(new URL('../fixtures/tree', import.meta.url)))
+    await expect(page.getByRole('button', { name: 'tree', exact: true })).toBeVisible()
+    await page.getByRole('searchbox', { name: 'Çalışma alanında ara', exact: true }).fill('nested-note.txt')
+    await page.getByText('nested-note.txt', { exact: true }).click()
+    const detail = page.getByRole('dialog', { name: 'nested-note.txt', exact: true })
+    await expect(detail.getByText('Çalışma alanı kökü / tree / nested', { exact: true })).toBeVisible()
+    await detail.getByRole('button', { name: 'Klasöre git', exact: true }).click()
+    await expect(detail).toHaveCount(0)
+    await expect(page).toHaveURL(/folder=/)
+    await expect(page.getByRole('heading', { name: 'nested', exact: true })).toBeVisible()
+    await expect(page.getByText('nested-note.txt', { exact: true })).toBeVisible()
+  } finally { await deleteWorkspace(owner.api, workspace.id); await owner.api.dispose() }
+})
+
+for (const section of ['files', 'activity']) {
+  test(`focus applies external Owner demotion and disposes stale ${section} controls`, async ({ page }) => {
+    const admin = await verifiedAccount('RoleAdmin'), affected = await verifiedAccount('RoleFocus')
+    const workspace = await newWorkspace(admin.api, 'Role refresh')
+    try {
+      expect((await mutate(admin.api, `/workspaces/${workspace.id}/invitations`, 'POST', { email: affected.email, role: 'editor' })).status()).toBe(201)
+      const link = new URL(await mailLink(affected.email, '/invitations/accept'))
+      expect((await mutate(affected.api, '/invitations/accept', 'POST', { token: new URLSearchParams(link.hash.slice(1)).get('token') })).status()).toBe(200)
+      const { items } = await (await admin.api.get(`${apiBase}/workspaces/${workspace.id}/members/page?limit=100`)).json()
+      const member = items.find((item: { email: string }) => item.email === affected.email)
+      expect(member).toBeTruthy()
+      expect((await mutate(admin.api, `/workspaces/${workspace.id}/members/${member.id}/role`, 'PATCH', { role: 'owner' })).status()).toBe(200)
+      await openAs(page, affected.api, `/workspaces/${workspace.id}/${section}`)
+      await expect(page.getByRole('link', { name: 'İşlem geçmişi', exact: true })).toBeVisible()
+      if (section === 'files') {
+        await page.getByRole('button', { name: 'Yeni klasör', exact: true }).first().click()
+        await expect(page.getByRole('dialog', { name: 'Yeni klasör', exact: true })).toBeVisible()
+      }
+      expect((await mutate(admin.api, `/workspaces/${workspace.id}/members/${member.id}/role`, 'PATCH', { role: 'viewer' })).status()).toBe(200)
+      await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+      await expect(page).toHaveURL(new RegExp(`/workspaces/${workspace.id}/files$`))
+      await expect(page.getByRole('link', { name: 'İşlem geçmişi', exact: true })).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Dosya yükle', exact: true })).toHaveCount(0)
+      await expect(page.getByRole('dialog', { name: 'Yeni klasör', exact: true })).toHaveCount(0)
+    } finally {
+      await deleteWorkspace(admin.api, workspace.id)
+      await admin.api.dispose(); await affected.api.dispose()
+    }
+  })
+}
+
+test('Owner invites Viewer; UI and direct API both enforce content and tenant boundaries', async ({ browser, page }) => {
+  const owner = await verifiedAccount('Owner'), viewer = await verifiedAccount('Viewer')
+  const workspace = await newWorkspace(owner.api, 'Team'), privateWorkspace = await newWorkspace(owner.api, 'Private')
+  const viewerContext = await browser.newContext({ storageState: await viewer.api.storageState() })
+  try {
+    const privateFolder = await mutate(owner.api, `/workspaces/${privateWorkspace.id}/folders`, 'POST', { name: 'Private folder', parentId: null })
+    expect(privateFolder.status()).toBe(201)
+    const { id: privateNodeId } = await privateFolder.json()
+    await openAs(page, owner.api, `/workspaces/${workspace.id}/members`)
+    await page.getByRole('button', { name: 'Üye davet et', exact: true }).click()
+    const invite = page.getByRole('dialog', { name: 'Ekip arkadaşını davet et' })
+    await invite.getByLabel('E-posta adresi', { exact: true }).fill(viewer.email)
+    await invite.getByLabel('Çalışma alanı rolü', { exact: true }).selectOption('viewer')
+    await invite.getByRole('button', { name: 'Davet oluştur', exact: true }).click()
+    await page.getByRole('link', { name: 'İşlem geçmişi', exact: true }).click()
+    await expect(page.getByRole('heading', { name: 'İşlem geçmişi', exact: true })).toBeVisible()
+    await expect(page.getByRole('list', { name: 'İşlem geçmişi kayıtları' })).toContainText('Ekip daveti oluşturuldu')
+    const viewerPage = await viewerContext.newPage()
+    await viewerPage.goto(await mailLink(viewer.email, '/invitations/accept'))
+    await viewerPage.getByRole('button', { name: 'Daveti kabul et', exact: true }).click()
+    await expect(viewerPage).toHaveURL(new RegExp(`/workspaces/${workspace.id}/files$`))
+    await expect(viewerPage.getByRole('heading', { name: 'Dosyalar', exact: true })).toBeVisible()
+    await expect(viewerPage.getByRole('button', { name: 'Dosya yükle', exact: true })).toHaveCount(0)
+    await expect(viewerPage.getByRole('link', { name: 'Takım üyeleri', exact: true })).toHaveCount(0)
+    await expect(viewerPage.getByRole('link', { name: 'İşlem geçmişi', exact: true })).toHaveCount(0)
+    expect((await viewer.api.get(`${apiBase}/workspaces/${workspace.id}/audit-events`)).status()).toBe(403)
+    expect((await mutate(viewer.api, `/workspaces/${workspace.id}/folders`, 'POST', { name: 'Denied', parentId: null })).status()).toBe(403)
+    expect((await viewer.api.get(`${apiBase}/workspaces/${privateWorkspace.id}/nodes/page`)).status()).toBe(404)
+    expect((await viewer.api.get(`${apiBase}/workspaces/${workspace.id}/nodes/${privateNodeId}`)).status()).toBe(404)
+    await viewerPage.goto(`/workspaces/${workspace.id}/members`)
+    await expect(viewerPage).toHaveURL(new RegExp(`/workspaces/${workspace.id}/files$`))
+    await viewerPage.goto(`/workspaces/${workspace.id}/activity`)
+    await expect(viewerPage).toHaveURL(new RegExp(`/workspaces/${workspace.id}/files$`))
+  } finally {
+    await viewerContext.close()
+    await deleteWorkspace(owner.api, workspace.id); await deleteWorkspace(owner.api, privateWorkspace.id)
+    await owner.api.dispose(); await viewer.api.dispose()
+  }
+})
+
+test('keyboard dialog, real upload and byte-exact download work together', async ({ page }) => {
+  const owner = await verifiedAccount('Keyboard'), workspace = await newWorkspace(owner.api)
+  try {
+    await openAs(page, owner.api, `/workspaces/${workspace.id}/files`)
+    const create = page.getByRole('button', { name: 'Yeni klasör', exact: true }).first()
+    await create.focus(); await page.keyboard.press('Enter')
+    const dialog = page.getByRole('dialog', { name: 'Yeni klasör', exact: true })
+    await expect(dialog.getByLabel('Klasör adı', { exact: true })).toBeFocused()
+    await page.keyboard.press('Escape')
+    await expect(dialog).not.toBeVisible()
+    await expect(create).toBeFocused()
+    await page.keyboard.press('Enter')
+    await dialog.getByLabel('Klasör adı', { exact: true }).fill('Keyboard Folder')
+    await dialog.getByRole('button', { name: 'Klasör oluştur', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Keyboard Folder', exact: true })).toBeVisible()
+    const fixture = fileURLToPath(new URL('../fixtures/upload-note.txt', import.meta.url))
+    await page.getByLabel('Yüklenecek dosyaları seç', { exact: true }).setInputFiles(fixture)
+    await page.getByText('upload-note.txt', { exact: true }).click()
+    const detail = page.getByRole('dialog', { name: 'upload-note.txt', exact: true })
+    const downloadEvent = page.waitForEvent('download')
+    await detail.getByRole('button', { name: 'İndir', exact: true }).click()
+    const download = await downloadEvent, file = await download.path()
+    expect(file).not.toBeNull()
+    expect(await readFile(file!)).toEqual(await readFile(fixture))
+    await detail.getByRole('button', { name: 'Önizlemeyi kapat', exact: true }).click()
+    const imageFixture = fileURLToPath(new URL('../fixtures/preview.png', import.meta.url))
+    await page.getByLabel('Yüklenecek dosyaları seç', { exact: true }).setInputFiles(imageFixture)
+    await page.getByText('preview.png', { exact: true }).click()
+    const imageDialog = page.getByRole('dialog', { name: 'preview.png', exact: true })
+    const image = imageDialog.getByRole('img', { name: 'preview.png', exact: true })
+    await expect(image).toBeVisible()
+    await expect.poll(() => image.evaluate(element => (element as HTMLImageElement).naturalWidth)).toBeGreaterThan(0)
+    await imageDialog.getByRole('button', { name: 'Önizlemeyi kapat', exact: true }).click()
+    await page.getByLabel('Yüklenecek dosyaları seç', { exact: true }).setInputFiles({ name: 'pages.pdf', mimeType: 'application/pdf', buffer: Buffer.from(createPreviewPdf()) })
+    await page.getByText('pages.pdf', { exact: true }).click()
+    const pdfDialog = page.getByRole('dialog', { name: 'pages.pdf', exact: true })
+    const pdfCanvas = pdfDialog.getByRole('img', { name: 'pages.pdf, sayfa 1', exact: true })
+    await expect.poll(() => pdfCanvas.evaluate(element => Array.from((element as HTMLCanvasElement).getContext('2d')!.getImageData(20, 20, 1, 1).data))).toEqual([255, 0, 0, 255])
+    await pdfDialog.getByRole('button', { name: 'Sonraki PDF sayfası', exact: true }).click()
+    await expect.poll(() => pdfDialog.getByRole('img', { name: 'pages.pdf, sayfa 2', exact: true }).evaluate(element => Array.from((element as HTMLCanvasElement).getContext('2d')!.getImageData(20, 20, 1, 1).data))).toEqual([0, 0, 255, 255])
+    await expect(pdfDialog.locator('iframe')).toHaveCount(0)
+    await pdfDialog.getByRole('button', { name: 'Önizlemeyi kapat', exact: true }).click()
+    await page.getByLabel('Yüklenecek dosyaları seç', { exact: true }).setInputFiles({ name: 'inactive.svg', mimeType: 'image/svg+xml', buffer: Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>window.__unsafe_preview = true</script></svg>') })
+    await page.getByText('inactive.svg', { exact: true }).click()
+    const unsafeDialog = page.getByRole('dialog', { name: 'inactive.svg', exact: true })
+    await expect(unsafeDialog.getByText('Bu dosya için önizleme yok', { exact: true })).toBeVisible()
+    await expect(unsafeDialog.locator('img,iframe')).toHaveCount(0)
+  } finally { await deleteWorkspace(owner.api, workspace.id); await owner.api.dispose() }
+})

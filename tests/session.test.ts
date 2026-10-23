@@ -97,6 +97,42 @@ test('Google start rejects an unexpected authorization destination', async t => 
   assert.deepEqual(assigned, [])
 })
 
+for (const replacement of [userA, userB]) {
+  for (const stage of ['acceptance', 'list refresh']) {
+    test(`invitation ${stage} cannot finish in a replacement ${replacement === userA ? 'session' : 'account'}`, async t => {
+      const result = deferred<Workspace>(), page = deferred<{ items: Workspace[]; nextCursor: string | null }>(), started = deferred<void>()
+      let listReads = 0
+      const setup = fixture({
+        acceptInvitation: () => stage === 'acceptance' ? result.promise : Promise.resolve(workspace('viewer', 'invited-workspace')),
+        listWorkspacesPage: () => { listReads++; started.resolve(); return page.promise },
+        login: async () => ({ user: replacement }),
+      })
+      t.after(setup.restore)
+      const pending = setup.drive.acceptInvitation('pending-invitation')
+      const rejected = assert.rejects(pending, /Oturum değişti/)
+      if (stage === 'list refresh') await started.promise
+      await setup.drive.signIn({ email: replacement.email, password: 'New-session' })
+      setup.drive.workspaces.value = [workspace('owner', 'current-workspace')]
+      result.resolve(workspace('viewer', 'invited-workspace'))
+      page.resolve({ items: [workspace('viewer', 'invited-workspace')], nextCursor: null })
+      await rejected
+      assert.deepEqual(setup.drive.workspaces.value.map(item => item.id), ['current-workspace'])
+      assert.equal(listReads, stage === 'acceptance' ? 0 : 1)
+      assert.deepEqual(setup.notifications, [])
+      assert.deepEqual(setup.navigations, [])
+    })
+  }
+}
+
+test('accepted invitation still returns its workspace when the current session list refresh fails', async t => {
+  const invited = workspace('viewer', 'invited-workspace')
+  const setup = fixture({ acceptInvitation: async () => invited, listWorkspacesPage: async () => { throw new Error('Temporary list failure') } })
+  t.after(setup.restore)
+  assert.deepEqual(await setup.drive.acceptInvitation('pending-invitation'), invited)
+  assert.equal(setup.notifications.length, 1)
+  assert.deepEqual(setup.navigations, [])
+})
+
 for (const replacement of [userB, userA]) {
   test(`a delayed 401 cannot sign out a replacement ${replacement === userA ? 'session for the same identity' : 'account'}`, async t => {
     const response = deferred<DriveNode[]>()

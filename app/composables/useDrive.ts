@@ -219,8 +219,15 @@ export function useDrive() {
     resendVerification: () => api.resendVerification(),
     inspectInvitation: (token: string) => api.inspectInvitation(token),
     async acceptInvitation(token: string) {
+      const revision = sessionGeneration.value, identity = user.value?.id
+      const ensureCurrent = () => {
+        if (revision !== sessionGeneration.value || identity !== user.value?.id) throw new Error('Oturum değişti. Daveti güncel hesabınla yeniden kontrol et.')
+      }
       const workspace = await api.acceptInvitation(token)
-      try { await refreshWorkspaces() } catch { notify('Davet kabul edildi. Çalışma alanı listesi daha sonra yenilenecek.', 'info') }
+      ensureCurrent()
+      try { await refreshWorkspaces() }
+      catch { ensureCurrent(); notify('Davet kabul edildi. Çalışma alanı listesi daha sonra yenilenecek.', 'info') }
+      ensureCurrent()
       return workspace
     },
   }

@@ -18,6 +18,8 @@ const invitationRoute = '/invitations/accept'
 const roleLabel = computed(() => preview.value?.role === 'editor' ? 'Editor' : 'Viewer')
 const expiry = computed(() => preview.value ? new Intl.DateTimeFormat('tr-TR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(preview.value.expiresAt)) : '')
 let requestVersion = 0
+let disposed = false
+onBeforeUnmount(() => { disposed = true; requestVersion++ })
 
 onMounted(() => {
   const fragment = new URLSearchParams(window.location.hash.slice(1))
@@ -29,7 +31,7 @@ onMounted(() => {
   ready.value = true
 })
 
-watch([ready, () => drive.user.value?.id, () => drive.user.value?.emailVerified, pendingToken], async () => {
+watch([ready, () => drive.user.value?.id, () => drive.user.value?.emailVerified, drive.sessionRevision, pendingToken], async () => {
   const version = ++requestVersion
   preview.value = null
   error.value = ''
@@ -50,14 +52,17 @@ watch([ready, () => drive.user.value?.id, () => drive.user.value?.emailVerified,
 
 async function accept() {
   if (!pendingToken.value || !preview.value || accepting.value) return
+  const token = pendingToken.value, revision = drive.sessionRevision.value, identity = user.value?.id
+  const isCurrent = () => !disposed && token === pendingToken.value && revision === drive.sessionRevision.value && identity === user.value?.id
   error.value = ''
   accepting.value = true
   try {
-    const workspace = await drive.acceptInvitation(pendingToken.value)
+    const workspace = await drive.acceptInvitation(token)
+    if (!isCurrent()) return
     pendingToken.value = null
     await navigateTo(`/workspaces/${encodeURIComponent(workspace.id)}/files`)
   } catch (cause) {
-    error.value = cause instanceof Error ? cause.message : 'Davet kabul edilemedi. Lütfen yeniden dene.'
+    if (isCurrent()) error.value = cause instanceof Error ? cause.message : 'Davet kabul edilemedi. Lütfen yeniden dene.'
   } finally { accepting.value = false }
 }
 

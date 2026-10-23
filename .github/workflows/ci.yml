@@ -24,4 +24,6 @@ jobs:
       - run: pnpm build
       - run: pnpm check:runtime
       - run: pnpm build:pages
+        env:
+          CF_PAGES: '1'
       - run: docker build -t ortak-drive-frontend:ci .

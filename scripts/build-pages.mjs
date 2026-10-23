@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
 const root = fileURLToPath(new URL('..', import.meta.url))
-const result = spawnSync(process.execPath, [path.join(root, 'node_modules/nuxt/bin/nuxt.mjs'), 'generate'], {
+// Pin the generic static preset: provider auto-detection otherwise changes the public output path.
+const result = spawnSync(process.execPath, [path.join(root, 'node_modules/nuxt/bin/nuxt.mjs'), 'generate', '--preset', 'static'], {
   cwd: root,
   env: { ...process.env, DRIVE_PAGES_BUILD: '1', NUXT_PUBLIC_DATA_MODE: 'http', NUXT_PUBLIC_API_BASE: '/api/v1' },
   stdio: 'inherit', shell: false,

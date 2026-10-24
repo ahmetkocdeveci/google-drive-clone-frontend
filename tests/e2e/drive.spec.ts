@@ -26,7 +26,9 @@ test('directory picker and ZIP preserve three levels; search opens the actual pa
     await page
       .getByLabel('Yüklenecek klasörü seç', { exact: true })
       .setInputFiles(fileURLToPath(new URL('../fixtures/tree', import.meta.url)))
-    await expect(page.getByRole('status')).toContainText('Klasör yapısı ve dosyalar yüklendi.')
+    await expect(
+      page.getByRole('status').filter({ hasText: 'Klasör yapısı ve dosyalar yüklendi.' }),
+    ).toBeVisible()
     await expect(page.getByRole('button', { name: 'tree', exact: true })).toBeVisible()
     await page
       .getByRole('searchbox', { name: 'Çalışma alanında ara', exact: true })

@@ -13,7 +13,7 @@ Birden fazla çalışma alanında dosya ve klasör paylaşmayı sağlayan Nuxt u
 | Backend deposu | [google-drive-clone-backend](https://github.com/ahmetkocdeveci/google-drive-clone-backend) |
 | Otomatik kontroller | [Frontend checks](https://github.com/ahmetkocdeveci/google-drive-clone-frontend/actions/workflows/ci.yml) |
 
-Depolar özeldir; kaynak koduna erişim için depo yetkisi gerekir. Korumalı API yollarını doğrudan açmak `403 EDGE_PROXY_REQUIRED` döndürür; uygulama aynı origin `/api/v1` gateway'ini kullanır.
+Depolar özeldir; kaynak koduna erişim için depo yetkisi gerekir. Korumalı API yollarını doğrudan açmak `403 EDGE_REQUIRED` döndürür; uygulama aynı origin `/api/v1` gateway'ini kullanır.
 
 ## Özellikler ve roller
 

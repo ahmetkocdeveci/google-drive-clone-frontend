@@ -18,7 +18,7 @@ Canlı manuel kabul; Google giriş/davet dönüşü, PDF yükleme/önizleme/indi
 
 ## Açık sınırlar
 
-- `node-forge@1.4.0` için henüz yamasız high bildirim vardır; build zincirindedir, üretim runtime'ına dahil edilmez. [Ayrıntılı güvenlik kaydı](bagimlilik-guvenlik-durumu.md).
+- `node-forge` kullanılmayan otomatik geliştirme sertifikası üretimi kaldırılarak bağımlılık ağacından çıkarıldı; tüm audit temizdir, istisna yoktur. Yerel HTTPS açık PEM/PFX ister. Sürüme bağlı listhen yaması yükseltmelerde bakım gerektirir. [Güvenlik kaydı](bagimlilik-guvenlik-durumu.md).
 - SVG/HTML çalıştırılmaz; Office önizlemesi ve dosya içeriği düzenleme sunulmaz. PDF'de metin seçme/arama katmanı yoktur.
 - Directory picker boş klasörleri bildirmez; destekleyen drop-entry akışı bunları aktarır. Aktarım atomik değildir. Büyük ZIP indirmesi cihaz belleğine bağlıdır.
 - axe taraması bütün ekranlar ve yardımcı teknolojiler için erişilebilirlik garantisi değildir. Canlı Google sağlayıcısı CI'da taklit edilmez; API testleri kontrollü provider yanıtlarını, manuel kabul gerçek hesabı kapsar.

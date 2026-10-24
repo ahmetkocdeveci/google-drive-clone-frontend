@@ -127,6 +127,8 @@ Nuxt **4.6.2**, Vue **3.5.44**, Vue Router **5.4.0**, TypeScript **6.0.3** ve PD
 - PDF, iframe yerine PDF.js canvas'ına çizilir; çok sayfa, worker/font/CMap/WASM dağıtıma dahildir. Parolalı/bozuk PDF için indirme sunulur. Metin seçme/arama katmanı yoktur.
 - Dosya **25 MiB**, alan **5 GiB**, yol **64 seviye**, klasör aktarımı **10.000 öğe**. Dosya seçicisi boş klasörleri bildirmez; destekleyen sürükle/bırak API'si aktarır.
 - Aktarım atomik değildir; hata/iptal öncesi tamamlanan öğeler kalır. Tekrar yükleme yeni kök oluşturur. Büyük ZIP'in son indirmesi tarayıcı belleğine bağlıdır.
-- 24 Ekim taramasında `node-forge@1.4.0` için **1 high, henüz yamasız araç zinciri uyarısı** kalmıştır. Paket üretim runtime'ından dışlanır. `check:dependencies`, runtime sınırını kontrol edip yalnız bu bildirimin tam derleme yoluna izin verir; yeni bildirim/farklı yol/yayımlanan yama kontrolü durdurur. Bu sıfır açık anlamına gelmez. [Güvenlik kaydı](docs/bagimlilik-guvenlik-durumu.md).
+- `node-forge`, listhen'in kullanılmayan otomatik sertifika üretimi kaldırılarak bağımlılık ağacından çıkarıldı. Geliştirme bağımlılıkları dahil audit **0 bildirim** verdi; CI'da audit istisnası yoktur. Yerel HTTPS için PEM/PFX sağlanmalıdır; üretim HTTPS'i Cloudflare/Northflank'ta devam eder. [Güvenlik kaydı](docs/bagimlilik-guvenlik-durumu.md), [sürüme bağlı yama](patches/README.md).
 
 [Teslim kontrolü](docs/release-checklist.md)
+
+Mimariyi, teknoloji seçimlerini, veri modelini, güvenlik kararlarını ve kod akışlarını anlatan [ayrıntılı teknik sunum rehberi](https://github.com/ahmetkocdeveci/google-drive-clone-backend/blob/main/docs/teknik-sunum-rehberi.md).

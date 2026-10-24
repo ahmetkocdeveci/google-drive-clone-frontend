@@ -1,31 +1,20 @@
 # Bağımlılık güvenlik durumu
 
-Son inceleme: **24 Ekim 2026**. Bu kayıt o tarihteki taramadır; sonraki açıkların yokluğu garantisi değildir.
+24 Ekim 2026: geliştirme bağımlılıkları dahil **`pnpm audit` sonucu 0 bildirim**. `node-forge` artık çözümlenen bağımlılık ağacında ve lockfile paket envanterinde bulunmaz. Bu anlık tarama bütün olası güvenlik hatalarının yokluğu garantisi değildir.
 
-## Uygulanan güncellemeler
+## Node-forge nasıl kaldırıldı?
 
-Nuxt 4.6.2 korunarak lockfile'daki uyumlu `undici` ve `serialize-javascript` yamaları güncellendi. Önceki 2 high / 2 moderate / 1 low taraması **1 high / 0 moderate / 0 low / 0 critical** seviyesine indi. Backend'in ayrı üretim bağımlılığı taramasında bulgu yoktur.
+Bağımlılık yolu `nuxt → @nuxt/nitro-server → nitropack → listhen → node-forge@1.4.0` idi. [Resmî bildirime](https://github.com/advisories/GHSA-86w9-cpqp-85rv) göre yayımlanmış güvenli forge sürümü hâlâ yoktur. Bu nedenle bir kriptografi yaması uydurulmadı veya audit sonucu bastırılmadı.
 
-| Bildirim | Durum |
-| --- | --- |
-| [Undici: GHSA-xjj6-f33q-929c](https://github.com/advisories/GHSA-xjj6-f33q-929c) | Lockfile'da yamalı uyumlu sürüme geçildi |
-| [Undici: GHSA-4qv8-2p9j-2685](https://github.com/advisories/GHSA-4qv8-2p9j-2685) | Lockfile'da yamalı uyumlu sürüme geçildi |
-| [Undici: GHSA-f72v-6w45-q472](https://github.com/advisories/GHSA-f72v-6w45-q472) | Lockfile'da yamalı uyumlu sürüme geçildi |
-| [Serialize-javascript: GHSA-m5mm-p8h7-m29v](https://github.com/advisories/GHSA-m5mm-p8h7-m29v) | Lockfile'da yamalı uyumlu sürüme geçildi |
-| [Node-forge: GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) | High; 1.4.0 etkilenmiş, audit'te yayımlanmış yama yok |
+Listhen'in kullanılmayan otomatik geliştirme sertifikası üretimi sürüme bağlı yerel yamayla kaldırıldı. PEM/PFX ile açıkça verilen sertifikalar Node'un native TLS desteğini kullanır. Sertifikasız HTTPS isteği HTTP'ye düşmez; açık hatayla durur. Tüm ESM/CommonJS/CLI forge yüklemeleri kaldırıldı. Aynı exact sürüme ait pnpm override yalnız bu kullanılmayan bağımlılık kenarını kaldırır.
 
-## Sınırlı ve görünür istisna
+Yama, uygulama dosyası ve hash'iyle kaynak depoda tutulur; `node_modules` elle düzenlenerek geçici bir çözüm yapılmaz. Frozen install aynı yamayı tekrar uygular. Ayrıntılar ve bakım koşulları: [listhen yaması](../patches/README.md).
 
-Kalan paket tam olarak şu araç zinciri yolundadır:
+## Sürekli kontrol
 
-```text
-nuxt → @nuxt/nitro-server → nitropack → listhen → node-forge@1.4.0
-```
+- `tests/listener.test.mjs`: 12 gerçek HTTP/TLS davranış testi; ESM/CommonJS, PEM/PFX, otomatik sertifika reddi ve hatalı parola senaryoları. Teste özel anahtarlar geçici dizinde oluşturulur ve silinir.
+- `check:dependencies`: önce üretim runtime sınırını kontrol eder, sonra tüm bağımlılıkları audit eder. **İstisna listesi yoktur.** Önceden izin verilen forge bildirimi de testi başarısız kılar. Eksik/bozuk rapor veya registry hatası başarı sayılmaz.
+- `check:runtime`: üretim `.output/server` manifestlerini ve symlink sınırlarını denetler; yasak build araçları runtime'a girerse durur. Docker yalnız `.output` taşır.
+- Pages dağıtımı statik Nuxt dosyaları ve bağımsız Web API gateway Function'ıdır. Canlı TLS Cloudflare/Northflank'tadır; yerel geliştirme HTTP'si yalnız loopback'tedir.
 
-Nuxt kaynak bağımlılığı olduğu için build/dev araçları da `pnpm audit --prod` raporuna girer. Paket dependency sınıfı değiştirilerek gizlenmez. Kriptografi koduna yerel yama veya uyumluluğu belirsiz override uygulanmaz. Geliştirme sunucusu loopback üzerinde tutulur; güvenilmeyen kodun derlemede çalıştırılmaması gerekir.
-
-Üretim Docker imajı yalnız `.output` taşır. `check:runtime`, gerçek `.output/server` manifestlerini, bağımlılıklarını ve symlink sınırlarını denetler; `node-forge` veya `braces` bulursa durur. Pages dağıtımı statik dosyalar ve Web API'leri kullanan bağımsız gateway Function'dan oluşur.
-
-`pnpm check:dependencies` önce runtime kontrolünü çalıştırır, ardından gerçek audit yanıtını inceler. Yalnız yukarıdaki bildirimin, **1.4.0 sürümünün ve tam bağımlılık yolunun** henüz yamasız durumuna izin verir; bunu terminale açıkça yazar. Başka bildirim/yol/sürüm, eksik rapor veya yayımlanmış yama denetimi başarısız kılar. Bu davranış ayrı testlerle doğrulanır. Ağ/registry hatası başarılı tarama sayılmaz.
-
-Bu istisna paketin güvenli olduğu anlamına gelmez; erişilebilir üretim yüzeyinden çıkarılmasıyla sınırlandırılır. Uyumlu resmi yama geldiğinde lockfile güncellenip istisna kaldırılmalı; test, tip, Node/Pages/Docker derlemeleri ve tarayıcı CI'ı tekrar geçmelidir.
+Önceki Undici bildirimleri `8.12.3`, serialize-javascript bildirimi `7.1.3` güncellemeleriyle giderildi. Lockfile korunur. Listhen/Nitro yükseltmesi sırasında bu yerel yama yeniden değerlendirilmeli; uyumlu resmî çözüm geldiğinde yama ve override birlikte kaldırılıp bütün CI kontrolleri tekrarlanmalıdır.

@@ -1,2 +1,7 @@
 allowBuilds:
   esbuild: true
+overrides:
+  # The matching listhen patch removes its certificate generator and all forge imports.
+  'listhen@1.10.1>node-forge': '-'
+patchedDependencies:
+  listhen@1.10.1: patches/listhen@1.10.1.patch

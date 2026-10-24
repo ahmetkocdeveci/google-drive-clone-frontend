@@ -15,7 +15,7 @@
     "preview:static": "node scripts/preview-static.mjs",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
-    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/session.test.ts tests/features.test.ts tests/audit.test.ts tests/folder-upload.test.ts tests/pdf-preview.test.ts tests/edge-proxy.test.mjs tests/dependencies.test.mjs",
+    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/session.test.ts tests/features.test.ts tests/audit.test.ts tests/folder-upload.test.ts tests/pdf-preview.test.ts tests/edge-proxy.test.mjs tests/dependencies.test.mjs tests/listener.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:types": "tsc -p tsconfig.e2e.json",
     "test:e2e:a11y": "playwright test accessibility.spec.ts",

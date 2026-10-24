@@ -28,11 +28,9 @@ async function walk(directory) {
         ...Object.keys(manifest.optionalDependencies || {}),
       ])
         if (blocked.has(name))
-          throw new Error(`Known vulnerable build dependency entered production output: ${name}`)
+          throw new Error(`Disallowed tooling dependency entered production output: ${name}`)
     }
   }
 }
 await walk(root)
-console.log(
-  `Runtime dependency boundary passed (${inspected} manifests). Build/development advisory findings remain tracked separately.`,
-)
+console.log(`Runtime dependency boundary passed (${inspected} manifests).`)

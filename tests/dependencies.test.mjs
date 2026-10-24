@@ -2,46 +2,46 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { reviewAudit } from '../scripts/check-dependencies.mjs'
 
-function knownReport() {
+function cleanReport() {
   return {
-    advisories: {
-      known: {
-        module_name: 'node-forge',
-        github_advisory_id: 'GHSA-86w9-cpqp-85rv',
-        patched_versions: null,
-        findings: [
-          { version: '1.4.0', paths: ['.>nuxt>@nuxt/nitro-server>nitropack>listhen>node-forge'] },
-        ],
-      },
-    },
-    metadata: { vulnerabilities: { high: 1 } },
+    advisories: {},
+    metadata: { vulnerabilities: { info: 0, low: 0, moderate: 0, high: 0, critical: 0 } },
   }
 }
-test('allows a clean audit and the exact reviewed build-only exception', () => {
-  assert.equal(reviewAudit({ advisories: {}, metadata: { vulnerabilities: { high: 0 } } }), 0)
-  assert.equal(reviewAudit(knownReport()), 1)
+test('accepts only a complete clean audit', () => {
+  assert.equal(reviewAudit(cleanReport()), 0)
 })
-test('rejects an advisory introduced by another dependency', () => {
-  const report = knownReport()
-  report.advisories.known.module_name = 'another-package'
-  assert.throws(() => reviewAudit(report), /Unreviewed/)
+test('rejects the formerly excepted node-forge advisory', () => {
+  const report = cleanReport()
+  report.advisories.known = { module_name: 'node-forge', github_advisory_id: 'GHSA-86w9-cpqp-85rv' }
+  report.metadata.vulnerabilities.high = 1
+  assert.throws(() => reviewAudit(report), /no audit exceptions/)
 })
-test('rejects node-forge reachable from another dependency path', () => {
-  const report = knownReport()
-  report.advisories.known.findings[0].paths.push('.>application>node-forge')
-  assert.throws(() => reviewAudit(report), /Unreviewed/)
+test('rejects every severity, including development tooling findings', () => {
+  for (const severity of ['info', 'low', 'moderate', 'high', 'critical']) {
+    const report = cleanReport()
+    report.advisories.other = { module_name: 'another-package', severity }
+    report.metadata.vulnerabilities[severity] = 1
+    assert.throws(() => reviewAudit(report), /vulnerabilities found/)
+  }
 })
-test('requires review again when a patch becomes available', () => {
-  const report = knownReport()
-  report.advisories.known.patched_versions = '>=1.4.1'
-  assert.throws(() => reviewAudit(report), /Unreviewed/)
-})
-test('fails closed for missing findings and incomplete audit responses', () => {
-  const report = knownReport()
-  report.advisories.known.findings = []
-  assert.throws(() => reviewAudit(report), /Unreviewed/)
+test('fails closed for missing or inconsistent audit data', () => {
   assert.throws(() => reviewAudit({}), /Invalid/)
-  const incomplete = knownReport()
-  incomplete.metadata.vulnerabilities.high = 2
-  assert.throws(() => reviewAudit(incomplete), /Incomplete/)
+  const report = cleanReport()
+  report.metadata.vulnerabilities.high = 1
+  assert.throws(() => reviewAudit(report), /Incomplete/)
+  const missing = cleanReport()
+  delete missing.metadata.vulnerabilities.critical
+  assert.throws(() => reviewAudit(missing), /Invalid/)
+})
+test('rejects registry errors and malformed vulnerability counts', () => {
+  assert.throws(
+    () => reviewAudit({ ...cleanReport(), error: { code: 'REGISTRY_ERROR' } }),
+    /Invalid/,
+  )
+  for (const value of [-1, 0.5, '0', null]) {
+    const report = cleanReport()
+    report.metadata.vulnerabilities.high = value
+    assert.throws(() => reviewAudit(report), /Invalid/)
+  }
 })

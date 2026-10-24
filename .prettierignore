@@ -1,0 +1,8 @@
+node_modules/
+.nuxt/
+.output/
+.pages-output/
+.data/
+playwright-report/
+test-results/
+pnpm-lock.yaml

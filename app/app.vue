@@ -1,6 +1,7 @@
 <script setup lang="ts">
 const drive = useDrive()
-const pageKey = (route: { path: string }) => `${drive.user.value?.id || 'anonymous'}:${route.path}:${drive.workspaceAccessRevision.value}`
+const pageKey = (route: { path: string }) =>
+  `${drive.user.value?.id || 'anonymous'}:${route.path}:${drive.workspaceAccessRevision.value}`
 function refreshWhenVisible() {
   if (document.visibilityState !== 'visible') return
   // Keep the current view on transient network failure; its own requests still show errors.

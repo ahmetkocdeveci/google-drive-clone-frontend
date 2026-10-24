@@ -7,8 +7,10 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
   css: ['~/assets/css/main.css'],
   nitro: {
-    ...(process.env.DRIVE_PAGES_BUILD === '1' ? { output: { dir: fileURLToPath(new URL('./.pages-output/', import.meta.url)) } } : {}),
-    publicAssets: ['cmaps', 'standard_fonts', 'wasm'].map(directory => ({
+    ...(process.env.DRIVE_PAGES_BUILD === '1'
+      ? { output: { dir: fileURLToPath(new URL('./.pages-output/', import.meta.url)) } }
+      : {}),
+    publicAssets: ['cmaps', 'standard_fonts', 'wasm'].map((directory) => ({
       dir: fileURLToPath(new URL(`./node_modules/pdfjs-dist/${directory}/`, import.meta.url)),
       baseURL: `/pdf-assets/${directory}`,
       maxAge: 86400,

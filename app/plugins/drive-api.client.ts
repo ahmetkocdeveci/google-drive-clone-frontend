@@ -5,8 +5,9 @@ import { resolveDataMode } from '../../shared/runtime-config'
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig()
   const mode = resolveDataMode(config.public.dataMode)
-  const driveApi = mode === 'http'
-    ? createHttpDriveApi({ baseUrl: String(config.public.apiBase) })
-    : createMockDriveApi()
+  const driveApi =
+    mode === 'http'
+      ? createHttpDriveApi({ baseUrl: String(config.public.apiBase) })
+      : createMockDriveApi()
   return { provide: { driveApi } }
 })

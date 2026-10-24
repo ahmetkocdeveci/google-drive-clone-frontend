@@ -3,7 +3,9 @@ import { apiBase, credentials, mailLink, requireTestEnvironment } from './helper
 
 test.beforeAll(requireTestEnvironment)
 
-test('register through the UI, verify the real local email, and create an Owner workspace', async ({ page }) => {
+test('register through the UI, verify the real local email, and create an Owner workspace', async ({
+  page,
+}) => {
   const account = credentials('Registration')
   await page.goto('/register')
   await page.getByLabel('Ad soyad', { exact: true }).fill(account.name)
@@ -27,7 +29,9 @@ test('register through the UI, verify the real local email, and create an Owner 
   await expect(page.getByRole('link', { name: 'Takım üyeleri', exact: true })).toBeVisible()
 })
 
-test('password reset uses its real mail link and returns to login with a new password', async ({ page }) => {
+test('password reset uses its real mail link and returns to login with a new password', async ({
+  page,
+}) => {
   const account = credentials('Reset')
   await page.goto('/register')
   await page.getByLabel('Ad soyad', { exact: true }).fill(account.name)

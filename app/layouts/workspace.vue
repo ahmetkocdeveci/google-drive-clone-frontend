@@ -1,54 +1,829 @@
 <script setup lang="ts">
 import type { Workspace } from '../../shared/types'
-const drive = useDrive(), route = useRoute()
+const drive = useDrive(),
+  route = useRoute()
 const workspace = computed(() => drive.currentWorkspace.value)
 const user = computed(() => drive.user.value)
 const allWorkspaces = computed(() => drive.workspaces.value)
 const canWrite = computed(() => workspace.value?.capabilities.includes('content:create') ?? false)
 const canManage = computed(() => workspace.value?.capabilities.includes('members:read') ?? false)
-const filesPath = computed(() => `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/files`)
-const membersPath = computed(() => `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/members`)
-const settingsPath = computed(() => `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/settings`)
-const activityPath = computed(() => `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/activity`)
+const filesPath = computed(
+  () => `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/files`,
+)
+const membersPath = computed(
+  () =>
+    `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/members`,
+)
+const settingsPath = computed(
+  () =>
+    `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/settings`,
+)
+const activityPath = computed(
+  () =>
+    `/workspaces/${encodeURIComponent(workspace.value?.id || String(route.params.wid))}/activity`,
+)
 const canReadAudit = computed(() => workspace.value?.capabilities.includes('audit:read') ?? false)
 const recent = computed(() => route.query.recent === '1')
-const mobile = ref(false), sidebarOpen = ref(false), creating = ref(false)
+const mobile = ref(false),
+  sidebarOpen = ref(false),
+  creating = ref(false)
 const mobileToggle = ref<HTMLButtonElement>()
-const switcher = ref<HTMLDetailsElement>(), newMenu = ref<HTMLDetailsElement>(), sidebar = ref<HTMLElement>(), searchInput = ref<HTMLInputElement>()
+const switcher = ref<HTMLDetailsElement>(),
+  newMenu = ref<HTMLDetailsElement>(),
+  sidebar = ref<HTMLElement>(),
+  searchInput = ref<HTMLInputElement>()
 const { notify } = useNotify()
-const search = computed({ get: () => drive.search.value, set: value => { drive.search.value = value } })
-const initials = computed(() => (user.value?.name || '?').split(' ').slice(0, 2).map(item => item[0]).join('').toLocaleUpperCase('tr-TR'))
-const usage = computed(() => workspace.value?.storageLimit ? Math.min(100, workspace.value.storageUsed / workspace.value.storageLimit * 100) : 0)
-function bytes(value: number) { if (value > 0 && value < 1024 ** 2) return `${(value / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB`; return value >= 1024 ** 3 ? `${(value / 1024 ** 3).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} GB` : `${(value / 1024 ** 2).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} MB` }
-function closeMenus() { if (switcher.value) switcher.value.open = false; if (newMenu.value) newMenu.value.open = false }
-function closeSidebar() { const restoreFocus = mobile.value && sidebarOpen.value; sidebarOpen.value = false; closeMenus(); if (restoreFocus) void nextTick(() => mobileToggle.value?.focus()) }
-async function selectWorkspace(item: Workspace) { closeSidebar(); drive.search.value = ''; await navigateTo(`/workspaces/${encodeURIComponent(item.id)}/files`) }
-async function fileAction(action: 'folder' | 'upload') { closeSidebar(); await navigateTo(filesPath.value); drive.command.value = action }
-async function searchFiles() { await navigateTo(filesPath.value); closeSidebar() }
-async function created(item: Workspace) { creating.value = false; notify('Çalışma alanı oluşturuldu.'); await selectWorkspace(item) }
-async function moreWorkspaces() { try { await drive.loadMoreWorkspaces() } catch (cause) { notify(cause instanceof Error ? cause.message : 'Diğer alanlar yüklenemedi.', 'error') } }
-async function logout() { try { await drive.signOut() } catch (cause) { notify(cause instanceof Error ? cause.message : 'Çıkış yapılamadı.', 'error') } }
-let media: MediaQueryList | undefined
-const syncMobile = () => { mobile.value = !!media?.matches; if (!mobile.value) sidebarOpen.value = false }
-function keydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') closeSidebar()
-  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); searchInput.value?.focus() }
-  if (event.key === 'Tab' && mobile.value && sidebarOpen.value) {
-    const elements = Array.from(sidebar.value?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),summary') || [])
-    const first = elements[0], last = elements[elements.length - 1]
-    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
-    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+const search = computed({
+  get: () => drive.search.value,
+  set: (value) => {
+    drive.search.value = value
+  },
+})
+const initials = computed(() =>
+  (user.value?.name || '?')
+    .split(' ')
+    .slice(0, 2)
+    .map((item) => item[0])
+    .join('')
+    .toLocaleUpperCase('tr-TR'),
+)
+const usage = computed(() =>
+  workspace.value?.storageLimit
+    ? Math.min(100, (workspace.value.storageUsed / workspace.value.storageLimit) * 100)
+    : 0,
+)
+function bytes(value: number) {
+  if (value > 0 && value < 1024 ** 2)
+    return `${(value / 1024).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} KB`
+  return value >= 1024 ** 3
+    ? `${(value / 1024 ** 3).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} GB`
+    : `${(value / 1024 ** 2).toLocaleString('tr-TR', { maximumFractionDigits: 1 })} MB`
+}
+function closeMenus() {
+  if (switcher.value) switcher.value.open = false
+  if (newMenu.value) newMenu.value.open = false
+}
+function closeSidebar() {
+  const restoreFocus = mobile.value && sidebarOpen.value
+  sidebarOpen.value = false
+  closeMenus()
+  if (restoreFocus) void nextTick(() => mobileToggle.value?.focus())
+}
+async function selectWorkspace(item: Workspace) {
+  closeSidebar()
+  drive.search.value = ''
+  await navigateTo(`/workspaces/${encodeURIComponent(item.id)}/files`)
+}
+async function fileAction(action: 'folder' | 'upload') {
+  closeSidebar()
+  await navigateTo(filesPath.value)
+  drive.command.value = action
+}
+async function searchFiles() {
+  await navigateTo(filesPath.value)
+  closeSidebar()
+}
+async function created(item: Workspace) {
+  creating.value = false
+  notify('Çalışma alanı oluşturuldu.')
+  await selectWorkspace(item)
+}
+async function moreWorkspaces() {
+  try {
+    await drive.loadMoreWorkspaces()
+  } catch (cause) {
+    notify(cause instanceof Error ? cause.message : 'Diğer alanlar yüklenemedi.', 'error')
   }
 }
-function outside(event: MouseEvent) { if (!sidebar.value?.contains(event.target as Node)) closeMenus() }
+async function logout() {
+  try {
+    await drive.signOut()
+  } catch (cause) {
+    notify(cause instanceof Error ? cause.message : 'Çıkış yapılamadı.', 'error')
+  }
+}
+let media: MediaQueryList | undefined
+const syncMobile = () => {
+  mobile.value = !!media?.matches
+  if (!mobile.value) sidebarOpen.value = false
+}
+function keydown(event: KeyboardEvent) {
+  if (event.key === 'Escape') closeSidebar()
+  if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    event.preventDefault()
+    searchInput.value?.focus()
+  }
+  if (event.key === 'Tab' && mobile.value && sidebarOpen.value) {
+    const elements = Array.from(
+      sidebar.value?.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),summary') || [],
+    )
+    const first = elements[0],
+      last = elements[elements.length - 1]
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault()
+      last?.focus()
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault()
+      first?.focus()
+    }
+  }
+}
+function outside(event: MouseEvent) {
+  if (!sidebar.value?.contains(event.target as Node)) closeMenus()
+}
 watch(() => route.fullPath, closeSidebar)
-watch(sidebarOpen, async value => { if (value) { await nextTick(); sidebar.value?.querySelector<HTMLButtonElement>('.mobile-close')?.focus() } })
-onMounted(async () => {
-  media = matchMedia('(max-width: 760px)'); syncMobile(); media.addEventListener('change', syncMobile)
-  document.addEventListener('keydown', keydown); document.addEventListener('click', outside)
-  try { await drive.refreshWorkspaces() } catch { /* The active workspace still has its guarded route. */ }
+watch(sidebarOpen, async (value) => {
+  if (value) {
+    await nextTick()
+    sidebar.value?.querySelector<HTMLButtonElement>('.mobile-close')?.focus()
+  }
 })
-onBeforeUnmount(() => { media?.removeEventListener('change', syncMobile); document.removeEventListener('keydown', keydown); document.removeEventListener('click', outside) })
+onMounted(async () => {
+  media = matchMedia('(max-width: 760px)')
+  syncMobile()
+  media.addEventListener('change', syncMobile)
+  document.addEventListener('keydown', keydown)
+  document.addEventListener('click', outside)
+  try {
+    await drive.refreshWorkspaces()
+  } catch {
+    /* The active workspace still has its guarded route. */
+  }
+})
+onBeforeUnmount(() => {
+  media?.removeEventListener('change', syncMobile)
+  document.removeEventListener('keydown', keydown)
+  document.removeEventListener('click', outside)
+})
 </script>
-<template><div class="drive-shell"><aside ref="sidebar" class="drive-sidebar" :class="{ open: sidebarOpen }" :inert="mobile && !sidebarOpen" aria-label="Ana gezinme"><div class="sidebar-brand"><NuxtLink to="/workspaces" class="brand"><img src="/favicon.svg" alt="" /><span>Ortak <strong>Drive</strong></span></NuxtLink><button class="icon-btn mobile-close" aria-label="Gezinmeyi kapat" @click="closeSidebar"><AppIcon name="close" /></button></div><details ref="switcher" class="workspace-switcher"><summary aria-label="Çalışma alanı seç"><span class="workspace-initial" :style="{ color: workspace?.color, backgroundColor: (workspace?.color || '#4285f4') + '18' }">{{ workspace?.name[0] }}</span><span class="switch-copy"><strong>{{ workspace?.name }}</strong><small>{{ workspace?.role === 'owner' ? 'Owner' : workspace?.role === 'editor' ? 'Editor' : 'Viewer' }} · Çalışma alanı</small></span><AppIcon name="down" :size="15" /></summary><div class="switcher-menu"><p>ÇALIŞMA ALANLARIN</p><button v-for="item in allWorkspaces" :key="item.id" :aria-current="item.id === workspace?.id ? 'true' : undefined" @click="selectWorkspace(item)"><span class="workspace-initial small" :style="{ color: item.color, backgroundColor: item.color + '18' }">{{ item.name[0] }}</span><span><strong>{{ item.name }}</strong><small>{{ item.role === 'owner' ? 'Owner' : item.role === 'editor' ? 'Editor' : 'Viewer' }}</small></span><AppIcon v-if="item.id === workspace?.id" name="check" :size="17" /></button><button v-if="drive.workspaceNextCursor.value" :disabled="drive.workspaceLoadingMore.value" @click="moreWorkspaces">{{ drive.workspaceLoadingMore.value ? 'Yükleniyor…' : 'Daha fazla çalışma alanı' }}</button><NuxtLink to="/workspaces">Tüm çalışma alanları<AppIcon name="arrow" :size="15" /></NuxtLink><button class="new-workspace-option" @click="creating = true; closeMenus()"><AppIcon name="plus" :size="18" />Yeni çalışma alanı</button></div></details><details v-if="canWrite" ref="newMenu" class="new-menu"><summary><AppIcon name="plus" :size="25" />Yeni</summary><div><button @click="fileAction('folder')"><AppIcon name="folder" />Yeni klasör</button><button @click="fileAction('upload')"><AppIcon name="upload" />Dosya yükle</button></div></details><p class="nav-label">KÜTÜPHANE</p><nav class="sidebar-nav" aria-label="Dosyalar"><NuxtLink :to="filesPath" :class="{ active: route.path === filesPath && !recent }"><AppIcon name="folder" />Tüm dosyalar</NuxtLink><NuxtLink :to="{ path: filesPath, query: { recent: '1' } }" :class="{ active: route.path === filesPath && recent }"><AppIcon name="clock" />Son kullanılanlar</NuxtLink></nav><template v-if="canManage"><p class="nav-label management-label">ÇALIŞMA ALANI</p><nav class="sidebar-nav" aria-label="Çalışma alanı yönetimi"><NuxtLink :to="membersPath" :class="{ active: route.path === membersPath }"><AppIcon name="users" />Takım üyeleri</NuxtLink><NuxtLink v-if="canReadAudit" :to="activityPath" :class="{ active: route.path === activityPath }"><AppIcon name="clock" />İşlem geçmişi</NuxtLink><NuxtLink :to="settingsPath" :class="{ active: route.path === settingsPath }"><AppIcon name="settings" />Alan ayarları</NuxtLink></nav></template><div class="sidebar-bottom"><div class="storage"><div><AppIcon name="cloud" :size="18" /><span>Depolama</span></div><div class="storage-track"><span :style="{ width: usage + '%' }" /></div><p>{{ bytes(workspace?.storageUsed || 0) }} kullanılıyor</p></div><NuxtLink to="/workspaces" class="all-workspaces"><AppIcon name="grid" :size="17" />Çalışma alanlarına dön</NuxtLink><NuxtLink to="/account" class="all-workspaces"><AppIcon name="shield" :size="17" />Hesap güvenliği</NuxtLink><div class="sidebar-account"><span class="avatar">{{ initials }}</span><span><strong>{{ user?.name }}</strong><small>{{ user?.email }}</small></span><button class="icon-btn" aria-label="Çıkış yap" title="Çıkış yap" @click="logout"><AppIcon name="logout" :size="18" /></button></div></div></aside><button v-if="mobile && sidebarOpen" class="sidebar-backdrop" aria-label="Gezinmeyi kapat" @click="closeSidebar" /><div class="drive-body" :inert="mobile && sidebarOpen"><header class="drive-topbar"><button ref="mobileToggle" class="icon-btn mobile-toggle" aria-label="Gezinmeyi aç" :aria-expanded="sidebarOpen" @click="sidebarOpen = true"><AppIcon name="menu" :size="23" /></button><form class="drive-search" role="search" @submit.prevent="searchFiles"><AppIcon name="search" :size="21" /><input ref="searchInput" v-model="search" aria-label="Çalışma alanında ara" placeholder="Çalışma alanında ara" type="search" /><kbd>Ctrl K</kbd></form><span class="topbar-workspace"><i />{{ workspace?.name }}</span><span v-if="drive.mode.value === 'demo'" class="mode-pill">Demo modu</span></header><main id="main-content" class="drive-main"><div v-if="drive.mode.value === 'demo'" class="demo-strip"><AppIcon name="info" :size="14" /><span>Demo veriler · E-posta gönderilmez. Sayfa yenilenince değişiklikler sıfırlanır.</span></div><slot /></main><footer class="drive-footer"><span>Her şeyin kendi çalışma alanında.</span><span>Ortak Drive</span></footer></div><WorkspaceCreator :open="creating" @close="creating = false" @created="created" /></div></template>
-<style scoped>.drive-shell{display:flex;min-height:100dvh}.drive-sidebar{position:fixed;inset:0 auto 0 0;width:256px;padding:23px 16px 0;display:flex;flex-direction:column;background:var(--bg);z-index:30;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin}.sidebar-brand{display:flex;justify-content:space-between;align-items:center;margin:0 10px 27px}.sidebar-brand .brand{font-size:23px}.workspace-switcher{position:relative;margin:0 8px 21px}.workspace-switcher>summary{display:flex;gap:10px;align-items:center;padding:10px;background:white;border:1px solid var(--line);border-radius:12px;cursor:pointer;list-style:none;min-height:61px}.workspace-switcher summary::-webkit-details-marker,.new-menu summary::-webkit-details-marker{display:none}.workspace-initial{width:35px;height:35px;display:grid;place-items:center;border-radius:8px;font-size:17px;flex:none}.workspace-initial.small{width:31px;height:31px;font-size:14px}.switch-copy{display:flex;flex-direction:column;gap:6px;min-width:0;flex:1}.switch-copy strong{font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.switch-copy small{font-size:10px;color:var(--muted)}.switcher-menu{max-height:min(60vh,480px);overflow:auto;position:absolute;left:0;top:calc(100% + 7px);width:100%;background:white;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:8px;z-index:50}.switcher-menu>p{font-size:9px;letter-spacing:1px;color:var(--muted);padding:6px 9px;margin:0 0 5px}.switcher-menu>button{display:flex;align-items:center;gap:10px;width:100%;padding:10px 8px;background:none;text-align:left;border-radius:7px}.switcher-menu>button:hover,.switcher-menu>button[aria-current=true]{background:#edf3fc}.switcher-menu>button>span:nth-child(2){display:flex;flex-direction:column;gap:5px;flex:1}.switcher-menu strong{font-size:12px;font-weight:500}.switcher-menu small{font-size:10px;color:var(--muted)}.switcher-menu>a{padding:14px 9px;display:flex;gap:10px;align-items:center;justify-content:space-between;font-size:12px;border-top:1px solid var(--line);margin-top:7px}.switcher-menu>button.new-workspace-option{color:var(--accent);font-size:12px;padding:11px 9px}.new-menu{position:relative;margin:0 8px 26px}.new-menu>summary{display:flex;align-items:center;gap:14px;border-radius:16px;background:white;box-shadow:0 2px 5px #3c404326,0 1px 2px #3c404330;width:fit-content;padding:16px 23px 16px 17px;cursor:pointer;list-style:none;font-size:14px;font-weight:500}.new-menu>div{position:absolute;top:calc(100% + 8px);left:0;padding:8px 0;z-index:45;width:224px;background:white;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow)}.new-menu>div>button{display:flex;gap:12px;align-items:center;padding:12px 16px;font-size:13px;background:none;width:100%;text-align:left}.new-menu>div>button:hover{background:var(--bg)}.nav-label{padding-left:16px;font-size:9px;letter-spacing:1px;color:var(--muted);margin:0 0 10px}.management-label{margin-top:28px}.sidebar-nav{display:flex;flex-direction:column;gap:4px}.sidebar-nav>a{display:flex;align-items:center;gap:13px;min-height:41px;padding:10px 16px;border-radius:25px;color:var(--text);font-size:13px;white-space:nowrap}.sidebar-nav>a:hover{background:#e9eef6;text-decoration:none}.sidebar-nav>a.active{background:#c2e7ff;color:#001d35;font-weight:500}.sidebar-bottom{margin-top:auto;padding-top:30px}.storage{padding:0 16px 19px}.storage>div:first-child{display:flex;gap:9px;align-items:center;font-size:12px;color:var(--muted)}.storage-track{height:4px;border-radius:5px;background:#dde4ed;margin:15px 0 10px;overflow:hidden}.storage-track>span{height:100%;display:block;background:#1a73e8;border-radius:5px;min-width:2px}.storage p{font-size:11px;color:var(--muted);margin:0}.all-workspaces{display:flex;align-items:center;gap:9px;font-size:11px;padding:12px 15px 19px;color:var(--muted)}.sidebar-account{display:flex;gap:9px;align-items:center;border-top:1px solid var(--line);margin:0 -16px;padding:18px 20px}.sidebar-account>span:nth-child(2){display:flex;flex-direction:column;gap:5px;min-width:0;flex:1}.sidebar-account strong{font-size:11px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sidebar-account small{font-size:9px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sidebar-account .icon-btn{width:28px}.drive-body{margin-left:256px;padding-right:16px;min-width:0;flex:1;display:flex;flex-direction:column}.drive-topbar{height:80px;display:flex;align-items:center;gap:20px;padding:0 10px 0 0}.drive-search{height:48px;border-radius:28px;background:#e9eef6;max-width:720px;flex:1;display:flex;align-items:center;gap:14px;padding:0 19px;color:#444746}.drive-search:focus-within{background:white;box-shadow:0 1px 5px #263b5729}.drive-search>input{min-width:0;width:100%;border:0;outline:none;background:none;height:100%;font-size:15px}.drive-search kbd{font:10px Arial,sans-serif;white-space:nowrap;color:#7a7f87}.topbar-workspace{display:flex;align-items:center;gap:7px;margin-left:auto;white-space:nowrap;font-size:11px;color:var(--muted);max-width:150px;overflow:hidden;text-overflow:ellipsis}.topbar-workspace i{display:block;width:6px;height:6px;flex:none;background:#4285f4;border-radius:50%}.drive-main{background:white;border-radius:21px;padding:24px 26px 35px;flex:1;min-height:calc(100dvh - 123px);min-width:0}.demo-strip{display:flex;gap:6px;align-items:center;color:#7890b0;font-size:10px;line-height:1.6;margin:-3px 0 21px}.drive-footer{display:flex;justify-content:space-between;font-size:10px;color:#7a8491;padding:15px 6px}.mobile-toggle,.mobile-close{display:none}.sidebar-backdrop{position:fixed;inset:0;background:#1a2d4660;z-index:29;backdrop-filter:blur(2px)}@media(max-width:1200px){.drive-sidebar{width:234px}.drive-body{margin-left:234px;padding-right:12px}.drive-main{padding:24px 21px 30px}.sidebar-brand .brand{font-size:21px}.topbar-workspace{display:none}.drive-topbar{gap:14px}.drive-topbar .mode-pill{font-size:10px}.switch-copy strong{font-size:12px}.sidebar-account{padding-inline:15px}}@media(max-width:760px){.drive-sidebar{width:266px;transform:translateX(-100%);transition:transform .2s}.drive-sidebar.open{transform:translateX(0);box-shadow:4px 0 25px #15273b20}.sidebar-brand{margin:0 0 24px 8px}.sidebar-brand .brand{font-size:22px}.mobile-close,.mobile-toggle{display:inline-grid}.drive-body{margin-left:0;padding:0 8px}.drive-topbar{height:73px;padding:0 5px 0 0;gap:8px}.drive-search{height:45px;padding:0 13px;gap:10px}.drive-search>input{font-size:13px}.drive-search kbd,.drive-topbar>.mode-pill{display:none}.drive-main{border-radius:17px;padding:22px 16px 28px;min-height:calc(100dvh - 118px)}.drive-footer{font-size:9px;padding:14px 9px}.demo-strip{font-size:9px;margin-bottom:18px;align-items:flex-start}.demo-strip svg{margin-top:1px}.switcher-menu{width:100%;max-width:calc(100vw - 55px)}.sidebar-account{padding-inline:20px}}</style>
+<template>
+  <div class="drive-shell">
+    <aside
+      ref="sidebar"
+      class="drive-sidebar"
+      :class="{ open: sidebarOpen }"
+      :inert="mobile && !sidebarOpen"
+      aria-label="Ana gezinme"
+    >
+      <div class="sidebar-brand">
+        <NuxtLink to="/workspaces" class="brand"
+          ><img src="/favicon.svg" alt="" /><span>Ortak <strong>Drive</strong></span></NuxtLink
+        ><button class="icon-btn mobile-close" aria-label="Gezinmeyi kapat" @click="closeSidebar">
+          <AppIcon name="close" />
+        </button>
+      </div>
+      <details ref="switcher" class="workspace-switcher">
+        <summary aria-label="Çalışma alanı seç">
+          <span
+            class="workspace-initial"
+            :style="{
+              color: workspace?.color,
+              backgroundColor: (workspace?.color || '#4285f4') + '18',
+            }"
+            >{{ workspace?.name[0] }}</span
+          ><span class="switch-copy"
+            ><strong>{{ workspace?.name }}</strong
+            ><small
+              >{{
+                workspace?.role === 'owner'
+                  ? 'Owner'
+                  : workspace?.role === 'editor'
+                    ? 'Editor'
+                    : 'Viewer'
+              }}
+              · Çalışma alanı</small
+            ></span
+          ><AppIcon name="down" :size="15" />
+        </summary>
+        <div class="switcher-menu">
+          <p>ÇALIŞMA ALANLARIN</p>
+          <button
+            v-for="item in allWorkspaces"
+            :key="item.id"
+            :aria-current="item.id === workspace?.id ? 'true' : undefined"
+            @click="selectWorkspace(item)"
+          >
+            <span
+              class="workspace-initial small"
+              :style="{ color: item.color, backgroundColor: item.color + '18' }"
+              >{{ item.name[0] }}</span
+            ><span
+              ><strong>{{ item.name }}</strong
+              ><small>{{
+                item.role === 'owner' ? 'Owner' : item.role === 'editor' ? 'Editor' : 'Viewer'
+              }}</small></span
+            ><AppIcon v-if="item.id === workspace?.id" name="check" :size="17" /></button
+          ><button
+            v-if="drive.workspaceNextCursor.value"
+            :disabled="drive.workspaceLoadingMore.value"
+            @click="moreWorkspaces"
+          >
+            {{
+              drive.workspaceLoadingMore.value ? 'Yükleniyor…' : 'Daha fazla çalışma alanı'
+            }}</button
+          ><NuxtLink to="/workspaces"
+            >Tüm çalışma alanları<AppIcon name="arrow" :size="15" /></NuxtLink
+          ><button
+            class="new-workspace-option"
+            @click="
+              creating = true
+              closeMenus()
+            "
+          >
+            <AppIcon name="plus" :size="18" />Yeni çalışma alanı
+          </button>
+        </div>
+      </details>
+      <details v-if="canWrite" ref="newMenu" class="new-menu">
+        <summary><AppIcon name="plus" :size="25" />Yeni</summary>
+        <div>
+          <button @click="fileAction('folder')"><AppIcon name="folder" />Yeni klasör</button
+          ><button @click="fileAction('upload')"><AppIcon name="upload" />Dosya yükle</button>
+        </div>
+      </details>
+      <p class="nav-label">KÜTÜPHANE</p>
+      <nav class="sidebar-nav" aria-label="Dosyalar">
+        <NuxtLink :to="filesPath" :class="{ active: route.path === filesPath && !recent }"
+          ><AppIcon name="folder" />Tüm dosyalar</NuxtLink
+        ><NuxtLink
+          :to="{ path: filesPath, query: { recent: '1' } }"
+          :class="{ active: route.path === filesPath && recent }"
+          ><AppIcon name="clock" />Son kullanılanlar</NuxtLink
+        >
+      </nav>
+      <template v-if="canManage"
+        ><p class="nav-label management-label">ÇALIŞMA ALANI</p>
+        <nav class="sidebar-nav" aria-label="Çalışma alanı yönetimi">
+          <NuxtLink :to="membersPath" :class="{ active: route.path === membersPath }"
+            ><AppIcon name="users" />Takım üyeleri</NuxtLink
+          ><NuxtLink
+            v-if="canReadAudit"
+            :to="activityPath"
+            :class="{ active: route.path === activityPath }"
+            ><AppIcon name="clock" />İşlem geçmişi</NuxtLink
+          ><NuxtLink :to="settingsPath" :class="{ active: route.path === settingsPath }"
+            ><AppIcon name="settings" />Alan ayarları</NuxtLink
+          >
+        </nav></template
+      >
+      <div class="sidebar-bottom">
+        <div class="storage">
+          <div><AppIcon name="cloud" :size="18" /><span>Depolama</span></div>
+          <div class="storage-track"><span :style="{ width: usage + '%' }" /></div>
+          <p>{{ bytes(workspace?.storageUsed || 0) }} kullanılıyor</p>
+        </div>
+        <NuxtLink to="/workspaces" class="all-workspaces"
+          ><AppIcon name="grid" :size="17" />Çalışma alanlarına dön</NuxtLink
+        ><NuxtLink to="/account" class="all-workspaces"
+          ><AppIcon name="shield" :size="17" />Hesap güvenliği</NuxtLink
+        >
+        <div class="sidebar-account">
+          <span class="avatar">{{ initials }}</span
+          ><span
+            ><strong>{{ user?.name }}</strong
+            ><small>{{ user?.email }}</small></span
+          ><button class="icon-btn" aria-label="Çıkış yap" title="Çıkış yap" @click="logout">
+            <AppIcon name="logout" :size="18" />
+          </button>
+        </div>
+      </div>
+    </aside>
+    <button
+      v-if="mobile && sidebarOpen"
+      class="sidebar-backdrop"
+      aria-label="Gezinmeyi kapat"
+      @click="closeSidebar"
+    />
+    <div class="drive-body" :inert="mobile && sidebarOpen">
+      <header class="drive-topbar">
+        <button
+          ref="mobileToggle"
+          class="icon-btn mobile-toggle"
+          aria-label="Gezinmeyi aç"
+          :aria-expanded="sidebarOpen"
+          @click="sidebarOpen = true"
+        >
+          <AppIcon name="menu" :size="23" />
+        </button>
+        <form class="drive-search" role="search" @submit.prevent="searchFiles">
+          <AppIcon name="search" :size="21" /><input
+            ref="searchInput"
+            v-model="search"
+            aria-label="Çalışma alanında ara"
+            placeholder="Çalışma alanında ara"
+            type="search"
+          /><kbd>Ctrl K</kbd>
+        </form>
+        <span class="topbar-workspace"><i />{{ workspace?.name }}</span
+        ><span v-if="drive.mode.value === 'demo'" class="mode-pill">Demo modu</span>
+      </header>
+      <main id="main-content" class="drive-main">
+        <div v-if="drive.mode.value === 'demo'" class="demo-strip">
+          <AppIcon name="info" :size="14" /><span
+            >Demo veriler · E-posta gönderilmez. Sayfa yenilenince değişiklikler sıfırlanır.</span
+          >
+        </div>
+        <slot />
+      </main>
+      <footer class="drive-footer">
+        <span>Her şeyin kendi çalışma alanında.</span><span>Ortak Drive</span>
+      </footer>
+    </div>
+    <WorkspaceCreator :open="creating" @close="creating = false" @created="created" />
+  </div>
+</template>
+<style scoped>
+.drive-shell {
+  display: flex;
+  min-height: 100dvh;
+}
+.drive-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 256px;
+  padding: 23px 16px 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 30;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+}
+.sidebar-brand {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 0 10px 27px;
+}
+.sidebar-brand .brand {
+  font-size: 23px;
+}
+.workspace-switcher {
+  position: relative;
+  margin: 0 8px 21px;
+}
+.workspace-switcher > summary {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  cursor: pointer;
+  list-style: none;
+  min-height: 61px;
+}
+.workspace-switcher summary::-webkit-details-marker,
+.new-menu summary::-webkit-details-marker {
+  display: none;
+}
+.workspace-initial {
+  width: 35px;
+  height: 35px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 17px;
+  flex: none;
+}
+.workspace-initial.small {
+  width: 31px;
+  height: 31px;
+  font-size: 14px;
+}
+.switch-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.switch-copy strong {
+  font-size: 13px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.switch-copy small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.switcher-menu {
+  max-height: min(60vh, 480px);
+  overflow: auto;
+  position: absolute;
+  left: 0;
+  top: calc(100% + 7px);
+  width: 100%;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 8px;
+  z-index: 50;
+}
+.switcher-menu > p {
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  padding: 6px 9px;
+  margin: 0 0 5px;
+}
+.switcher-menu > button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 8px;
+  background: none;
+  text-align: left;
+  border-radius: 7px;
+}
+.switcher-menu > button:hover,
+.switcher-menu > button[aria-current='true'] {
+  background: #edf3fc;
+}
+.switcher-menu > button > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+.switcher-menu strong {
+  font-size: 12px;
+  font-weight: 500;
+}
+.switcher-menu small {
+  font-size: 10px;
+  color: var(--muted);
+}
+.switcher-menu > a {
+  padding: 14px 9px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 7px;
+}
+.switcher-menu > button.new-workspace-option {
+  color: var(--accent);
+  font-size: 12px;
+  padding: 11px 9px;
+}
+.new-menu {
+  position: relative;
+  margin: 0 8px 26px;
+}
+.new-menu > summary {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-radius: 16px;
+  background: white;
+  box-shadow:
+    0 2px 5px #3c404326,
+    0 1px 2px #3c404330;
+  width: fit-content;
+  padding: 16px 23px 16px 17px;
+  cursor: pointer;
+  list-style: none;
+  font-size: 14px;
+  font-weight: 500;
+}
+.new-menu > div {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  padding: 8px 0;
+  z-index: 45;
+  width: 224px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.new-menu > div > button {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  font-size: 13px;
+  background: none;
+  width: 100%;
+  text-align: left;
+}
+.new-menu > div > button:hover {
+  background: var(--bg);
+}
+.nav-label {
+  padding-left: 16px;
+  font-size: 9px;
+  letter-spacing: 1px;
+  color: var(--muted);
+  margin: 0 0 10px;
+}
+.management-label {
+  margin-top: 28px;
+}
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sidebar-nav > a {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 41px;
+  padding: 10px 16px;
+  border-radius: 25px;
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.sidebar-nav > a:hover {
+  background: #e9eef6;
+  text-decoration: none;
+}
+.sidebar-nav > a.active {
+  background: #c2e7ff;
+  color: #001d35;
+  font-weight: 500;
+}
+.sidebar-bottom {
+  margin-top: auto;
+  padding-top: 30px;
+}
+.storage {
+  padding: 0 16px 19px;
+}
+.storage > div:first-child {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+}
+.storage-track {
+  height: 4px;
+  border-radius: 5px;
+  background: #dde4ed;
+  margin: 15px 0 10px;
+  overflow: hidden;
+}
+.storage-track > span {
+  height: 100%;
+  display: block;
+  background: #1a73e8;
+  border-radius: 5px;
+  min-width: 2px;
+}
+.storage p {
+  font-size: 11px;
+  color: var(--muted);
+  margin: 0;
+}
+.all-workspaces {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  padding: 12px 15px 19px;
+  color: var(--muted);
+}
+.sidebar-account {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  margin: 0 -16px;
+  padding: 18px 20px;
+}
+.sidebar-account > span:nth-child(2) {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+  flex: 1;
+}
+.sidebar-account strong {
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-account small {
+  font-size: 9px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-account .icon-btn {
+  width: 28px;
+}
+.drive-body {
+  margin-left: 256px;
+  padding-right: 16px;
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.drive-topbar {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 10px 0 0;
+}
+.drive-search {
+  height: 48px;
+  border-radius: 28px;
+  background: #e9eef6;
+  max-width: 720px;
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 19px;
+  color: #444746;
+}
+.drive-search:focus-within {
+  background: white;
+  box-shadow: 0 1px 5px #263b5729;
+}
+.drive-search > input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: none;
+  height: 100%;
+  font-size: 15px;
+}
+.drive-search kbd {
+  font:
+    10px Arial,
+    sans-serif;
+  white-space: nowrap;
+  color: #7a7f87;
+}
+.topbar-workspace {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--muted);
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-workspace i {
+  display: block;
+  width: 6px;
+  height: 6px;
+  flex: none;
+  background: #4285f4;
+  border-radius: 50%;
+}
+.drive-main {
+  background: white;
+  border-radius: 21px;
+  padding: 24px 26px 35px;
+  flex: 1;
+  min-height: calc(100dvh - 123px);
+  min-width: 0;
+}
+.demo-strip {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  color: #7890b0;
+  font-size: 10px;
+  line-height: 1.6;
+  margin: -3px 0 21px;
+}
+.drive-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #7a8491;
+  padding: 15px 6px;
+}
+.mobile-toggle,
+.mobile-close {
+  display: none;
+}
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #1a2d4660;
+  z-index: 29;
+  backdrop-filter: blur(2px);
+}
+@media (max-width: 1200px) {
+  .drive-sidebar {
+    width: 234px;
+  }
+  .drive-body {
+    margin-left: 234px;
+    padding-right: 12px;
+  }
+  .drive-main {
+    padding: 24px 21px 30px;
+  }
+  .sidebar-brand .brand {
+    font-size: 21px;
+  }
+  .topbar-workspace {
+    display: none;
+  }
+  .drive-topbar {
+    gap: 14px;
+  }
+  .drive-topbar .mode-pill {
+    font-size: 10px;
+  }
+  .switch-copy strong {
+    font-size: 12px;
+  }
+  .sidebar-account {
+    padding-inline: 15px;
+  }
+}
+@media (max-width: 760px) {
+  .drive-sidebar {
+    width: 266px;
+    transform: translateX(-100%);
+    transition: transform 0.2s;
+  }
+  .drive-sidebar.open {
+    transform: translateX(0);
+    box-shadow: 4px 0 25px #15273b20;
+  }
+  .sidebar-brand {
+    margin: 0 0 24px 8px;
+  }
+  .sidebar-brand .brand {
+    font-size: 22px;
+  }
+  .mobile-close,
+  .mobile-toggle {
+    display: inline-grid;
+  }
+  .drive-body {
+    margin-left: 0;
+    padding: 0 8px;
+  }
+  .drive-topbar {
+    height: 73px;
+    padding: 0 5px 0 0;
+    gap: 8px;
+  }
+  .drive-search {
+    height: 45px;
+    padding: 0 13px;
+    gap: 10px;
+  }
+  .drive-search > input {
+    font-size: 13px;
+  }
+  .drive-search kbd,
+  .drive-topbar > .mode-pill {
+    display: none;
+  }
+  .drive-main {
+    border-radius: 17px;
+    padding: 22px 16px 28px;
+    min-height: calc(100dvh - 118px);
+  }
+  .drive-footer {
+    font-size: 9px;
+    padding: 14px 9px;
+  }
+  .demo-strip {
+    font-size: 9px;
+    margin-bottom: 18px;
+    align-items: flex-start;
+  }
+  .demo-strip svg {
+    margin-top: 1px;
+  }
+  .switcher-menu {
+    width: 100%;
+    max-width: calc(100vw - 55px);
+  }
+  .sidebar-account {
+    padding-inline: 20px;
+  }
+}
+</style>

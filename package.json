@@ -15,11 +15,14 @@
     "preview:static": "node scripts/preview-static.mjs",
     "postinstall": "nuxt prepare",
     "typecheck": "nuxt typecheck",
-    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/session.test.ts tests/features.test.ts tests/audit.test.ts tests/folder-upload.test.ts tests/pdf-preview.test.ts tests/edge-proxy.test.mjs",
+    "test": "node --experimental-strip-types --test tests/domain.test.ts tests/session.test.ts tests/features.test.ts tests/audit.test.ts tests/folder-upload.test.ts tests/pdf-preview.test.ts tests/edge-proxy.test.mjs tests/dependencies.test.mjs",
     "test:e2e": "playwright test",
     "test:e2e:types": "tsc -p tsconfig.e2e.json",
     "test:e2e:a11y": "playwright test accessibility.spec.ts",
-    "check:runtime": "node scripts/check-runtime.mjs"
+    "check:runtime": "node scripts/check-runtime.mjs",
+    "check:dependencies": "node scripts/check-dependencies.mjs",
+    "format": "prettier --write app shared functions scripts tests *.ts *.json .github/workflows/*.yml",
+    "format:check": "prettier --check app shared functions scripts tests *.ts *.json .github/workflows/*.yml"
   },
   "dependencies": {
     "nuxt": "4.6.2",
@@ -31,6 +34,7 @@
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.64.1",
     "@types/node": "24.19.2",
+    "prettier": "3.9.10",
     "typescript": "6.0.3",
     "vue-tsc": "3.3.13"
   }

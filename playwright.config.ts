@@ -15,10 +15,20 @@ export default defineConfig({
   use: { baseURL, trace: 'off', screenshot: 'only-on-failure', video: 'off' },
   projects: [
     { name: 'chromium', testIgnore: '**/mobile.spec.ts', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile-chromium', testMatch: '**/mobile.spec.ts', use: { ...devices['Pixel 7'], defaultBrowserType: 'chromium' } },
+    {
+      name: 'mobile-chromium',
+      testMatch: '**/mobile.spec.ts',
+      use: { ...devices['Pixel 7'], defaultBrowserType: 'chromium' },
+    },
   ],
-  webServer: process.env.E2E_EXTERNAL_SERVER === '1' ? undefined : {
-    command: 'pnpm dev', url: `${baseURL}/login`, timeout: 120_000, reuseExistingServer: !process.env.CI,
-    env: { NUXT_PUBLIC_DATA_MODE: 'http', NUXT_PUBLIC_API_BASE: `${apiOrigin}/api/v1` },
-  },
+  webServer:
+    process.env.E2E_EXTERNAL_SERVER === '1'
+      ? undefined
+      : {
+          command: 'pnpm dev',
+          url: `${baseURL}/login`,
+          timeout: 120_000,
+          reuseExistingServer: !process.env.CI,
+          env: { NUXT_PUBLIC_DATA_MODE: 'http', NUXT_PUBLIC_API_BASE: `${apiOrigin}/api/v1` },
+        },
 })

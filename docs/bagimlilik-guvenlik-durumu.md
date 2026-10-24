@@ -1,16 +1,31 @@
-# Bağımlılık güvenlik durumu — 23 Ekim 2026
+# Bağımlılık güvenlik durumu
 
-Backend `pnpm audit --prod` sonucu 0 bulgudur. Frontend Nuxt 4.6.1 taramasında 2 high ve 3 moderate paket bulgusu vardı. Nuxt 4.6.2 güncellemesinden sonra aynı tarama **2 high, 0 moderate, 0 critical** bildirdi. Üç moderate paket bulgusu aşağıdaki iki Nuxt bildirimine aitti; node-forge ve braces açıkları giderilmiş sayılmaz.
+Son inceleme: **24 Ekim 2026**. Bu kayıt o tarihteki taramadır; sonraki açıkların yokluğu garantisi değildir.
 
-| Paket / bildirim | Güncel durum |
+## Uygulanan güncellemeler
+
+Nuxt 4.6.2 korunarak lockfile'daki uyumlu `undici` ve `serialize-javascript` yamaları güncellendi. Önceki 2 high / 2 moderate / 1 low taraması **1 high / 0 moderate / 0 low / 0 critical** seviyesine indi. Backend'in ayrı üretim bağımlılığı taramasında bulgu yoktur.
+
+| Bildirim | Durum |
 | --- | --- |
-| Nuxt / `@nuxt/nitro-server`: büyük-küçük harf değişimiyle route rules atlama | [GHSA-vjh5-4x84-xrqp](https://github.com/advisories/GHSA-vjh5-4x84-xrqp); 4.6.2 düzeltmesi uygulandı |
-| Nuxt: server islands `useHeadSafe` sanitizasyonu | [GHSA-xfq5-w38q-pc2x](https://github.com/advisories/GHSA-xfq5-w38q-pc2x); 4.6.2 düzeltmesi uygulandı |
-| `nuxt → nitropack → listhen → node-forge`: RSA imza doğrulamasında ASN.1 kontrolü | [GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv); <=1.4.0 etkilenmiş, 23 Ekim taramasında yayımlanmış yama bildirilmedi |
-| `nuxt → nitropack → globby → micromatch → braces`: derin desenlerde stack taşması | [GHSA-vfj7-8cjw-p6xm](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm); <=3.0.3 etkilenmiş, 23 Ekim taramasında yayımlanmış yama bildirilmedi |
+| [Undici: GHSA-xjj6-f33q-929c](https://github.com/advisories/GHSA-xjj6-f33q-929c) | Lockfile'da yamalı uyumlu sürüme geçildi |
+| [Undici: GHSA-4qv8-2p9j-2685](https://github.com/advisories/GHSA-4qv8-2p9j-2685) | Lockfile'da yamalı uyumlu sürüme geçildi |
+| [Undici: GHSA-f72v-6w45-q472](https://github.com/advisories/GHSA-f72v-6w45-q472) | Lockfile'da yamalı uyumlu sürüme geçildi |
+| [Serialize-javascript: GHSA-m5mm-p8h7-m29v](https://github.com/advisories/GHSA-m5mm-p8h7-m29v) | Lockfile'da yamalı uyumlu sürüme geçildi |
+| [Node-forge: GHSA-86w9-cpqp-85rv](https://github.com/advisories/GHSA-86w9-cpqp-85rv) | High; 1.4.0 etkilenmiş, audit'te yayımlanmış yama yok |
 
-Nuxt kaynak dependency olduğu için derleme/geliştirme araçları da `--prod` taramasına girer. Bulgular dependency kategorisi değiştirilerek veya audit bastırılarak gizlenmedi. Uyumluluğu belirsiz override ya da yerel kriptografi yaması uygulanmadı.
+## Sınırlı ve görünür istisna
 
-Üretim Dockerfile'ı yalnız derlenen `.output` dizinini taşır. `pnpm check:runtime`, `.output/server` içindeki manifestleri ve dependency/optionalDependency kayıtlarını tarayıp node-forge veya braces bulursa derlemeyi durdurur. CI ve Docker derlemesi bu kontrolü çalıştırır. İlk teslimin uzak frontend CI ve Docker kontrolü başarılıydı; yeni 4.6.2 çıktısında da 21 manifest kontrolü geçti; iki paket bulunmadı. Bu envanter kontrolü genel bir güvenlik denetimi veya bütün açıkların yokluğu kanıtı değildir.
+Kalan paket tam olarak şu araç zinciri yolundadır:
 
-Uygulama kullanıcı aramasını bu glob araçlarına iletmez; dosya işlemleri kendi API/MongoDB katmanından geçer. Geliştirme sunucusu yalnız loopback üzerinde dinler. Build/dev bağımlılıkları bakım kapsamında kalır; resmi yama veya bu bağımlılıkları kaldıran uyumlu sürüm geldiğinde frozen lockfile ile unit/tip/derleme/runtime ve CI kontrolleri yeniden yapılmalıdır. Canlı TLS/gateway kurulumu henüz tamamlanmadı.
+```text
+nuxt → @nuxt/nitro-server → nitropack → listhen → node-forge@1.4.0
+```
+
+Nuxt kaynak bağımlılığı olduğu için build/dev araçları da `pnpm audit --prod` raporuna girer. Paket dependency sınıfı değiştirilerek gizlenmez. Kriptografi koduna yerel yama veya uyumluluğu belirsiz override uygulanmaz. Geliştirme sunucusu loopback üzerinde tutulur; güvenilmeyen kodun derlemede çalıştırılmaması gerekir.
+
+Üretim Docker imajı yalnız `.output` taşır. `check:runtime`, gerçek `.output/server` manifestlerini, bağımlılıklarını ve symlink sınırlarını denetler; `node-forge` veya `braces` bulursa durur. Pages dağıtımı statik dosyalar ve Web API'leri kullanan bağımsız gateway Function'dan oluşur.
+
+`pnpm check:dependencies` önce runtime kontrolünü çalıştırır, ardından gerçek audit yanıtını inceler. Yalnız yukarıdaki bildirimin, **1.4.0 sürümünün ve tam bağımlılık yolunun** henüz yamasız durumuna izin verir; bunu terminale açıkça yazar. Başka bildirim/yol/sürüm, eksik rapor veya yayımlanmış yama denetimi başarısız kılar. Bu davranış ayrı testlerle doğrulanır. Ağ/registry hatası başarılı tarama sayılmaz.
+
+Bu istisna paketin güvenli olduğu anlamına gelmez; erişilebilir üretim yüzeyinden çıkarılmasıyla sınırlandırılır. Uyumlu resmi yama geldiğinde lockfile güncellenip istisna kaldırılmalı; test, tip, Node/Pages/Docker derlemeleri ve tarayıcı CI'ı tekrar geçmelidir.

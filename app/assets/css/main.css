@@ -610,6 +610,10 @@ textarea.form-input {
   line-height: 1.8;
   margin: 23px 0 0;
 }
+.auth-links a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
 .auth-mode {
   display: flex;
   justify-content: center;

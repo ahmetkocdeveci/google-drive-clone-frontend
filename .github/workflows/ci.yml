@@ -90,6 +90,10 @@ jobs:
         working-directory: backend
         run: |
           if [ -n "${DRIVE_E2E_PID:-}" ]; then kill -TERM "$DRIVE_E2E_PID" 2>/dev/null || true; fi
+          for attempt in $(seq 1 10); do
+            if ! kill -0 "${DRIVE_E2E_PID:-0}" 2>/dev/null; then break; fi
+            sleep 1
+          done
           docker compose down
       - name: Save browser report
         if: always()

@@ -27,6 +27,12 @@ test('register through the UI, verify the real local email, and create an Owner 
   await dialog.getByRole('button', { name: 'Alanı oluştur', exact: true }).click()
   await expect(page).toHaveURL(/\/workspaces\/[^/]+\/files$/)
   await expect(page.getByRole('link', { name: 'Takım üyeleri', exact: true })).toBeVisible()
+  const workspacePath = new URL(page.url()).pathname
+  await page.getByRole('button', { name: 'Çıkış yap', exact: true }).click()
+  await expect(page).toHaveURL(/\/login$/)
+  expect((await page.request.get(`${apiBase}/workspaces`)).status()).toBe(401)
+  await page.goto(workspacePath)
+  await expect(page).toHaveURL(/\/login\?returnTo=/)
 })
 
 test('password reset uses its real mail link and returns to login with a new password', async ({
@@ -40,10 +46,15 @@ test('password reset uses its real mail link and returns to login with a new pas
   await page.getByLabel('Şifreyi tekrar yaz', { exact: true }).fill(account.password)
   await page.getByRole('button', { name: 'Hesap oluştur', exact: true }).click()
   await expect(page).toHaveURL(/\/verify-email/)
+  await page.goto(await mailLink(account.email, '/verify-email'))
+  await page.getByRole('button', { name: 'E-postamı doğrula', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'E-postan doğrulandı' })).toBeVisible()
   await page.goto('/forgot-password')
   await page.getByLabel('E-posta adresi', { exact: true }).fill(account.email)
   await page.getByRole('button', { name: 'Yenileme bağlantısı gönder' }).click()
-  await expect(page.getByRole('status')).toContainText('Bu adresle bir hesap varsa')
+  await expect(
+    page.getByRole('region', { name: 'Şifreni yenile' }).getByRole('status'),
+  ).toContainText('Bu adresle bir hesap varsa')
   await page.goto(await mailLink(account.email, '/reset-password'))
   const replacement = `New1!${crypto.randomUUID()}`
   await page.getByLabel('Yeni şifre', { exact: true }).fill(replacement)

@@ -29,6 +29,6 @@ Pages Functions günlük kotası için dashboard'da **Fail closed** seçin. Sade
 
 Backend'deki `scripts/prepare-northflank.mjs`, gerekli ayarları Git dışındaki aktarım dosyalarına hazırlayabilir; [backend rehberi](https://github.com/ahmetkocdeveci/google-drive-clone-backend/blob/main/docs/cloudflare-northflank.md). Gerçek değerleri sohbete veya screenshot'a koymayın.
 
-Bu dosya yayın kaydı değildir. Yerel83 frontend testi, mock upstream gateway kontrolleri, tip ve statik artifact kontrolü canlı Cloudflare/Northflank kabulünün yerine geçmez. Son adımlar: uygulama adresinin size ait olduğunu doğrulama, Google callback, R2 CORS, Atlas ağ erişimi, SMTP verify ve gerçek HTTPS kullanıcı akışları.
+Mevcut yayın `https://ahmet-drive.pages.dev` adresindedir. Backend ve TLS/private MongoDB Northflank'ta, dosyalar private R2'dedir. Google callback, R2 CORS ve SMTP bağlantısı yapılandırılmış; gerçek giriş/davet, PDF ve rol akışları canlıda manuel doğrulanmıştır. Otomatik test kapsamı ve üretim sınırları [teslim kontrolünde](release-checklist.md) tutulur. Yeni bir kurulumda bu kabulün hedef hesap/origin üzerinde yeniden yapılması gerekir.
 
 Kaynaklar: [Functions rotaları ve fail closed](https://developers.cloudflare.com/pages/functions/routing/), [SPA davranışı](https://developers.cloudflare.com/pages/configuration/serving-pages/), [Git entegrasyonu](https://developers.cloudflare.com/pages/get-started/git-integration/).

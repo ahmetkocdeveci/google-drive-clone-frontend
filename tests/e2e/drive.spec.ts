@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test'
 import { fileURLToPath } from 'node:url'
 import { readFile } from 'node:fs/promises'
 import { createPreviewPdf } from '../fixtures/preview-pdf'
+import { readFixtureZip } from '../fixtures/read-zip'
 import {
   apiBase,
   deleteWorkspace,
@@ -15,7 +16,7 @@ import {
 
 test.beforeAll(requireTestEnvironment)
 
-test('directory picker preserves nested files and search details lead to the actual parent', async ({
+test('directory picker and ZIP preserve three levels; search opens the actual parent', async ({
   page,
 }) => {
   const owner = await verifiedAccount('Directory'),
@@ -25,6 +26,7 @@ test('directory picker preserves nested files and search details lead to the act
     await page
       .getByLabel('Yüklenecek klasörü seç', { exact: true })
       .setInputFiles(fileURLToPath(new URL('../fixtures/tree', import.meta.url)))
+    await expect(page.getByRole('status')).toContainText('Klasör yapısı ve dosyalar yüklendi.')
     await expect(page.getByRole('button', { name: 'tree', exact: true })).toBeVisible()
     await page
       .getByRole('searchbox', { name: 'Çalışma alanında ara', exact: true })
@@ -39,6 +41,25 @@ test('directory picker preserves nested files and search details lead to the act
     await expect(page).toHaveURL(/folder=/)
     await expect(page.getByRole('heading', { name: 'nested', exact: true })).toBeVisible()
     await expect(page.getByText('nested-note.txt', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'derin', exact: true }).click()
+    await expect(page.getByText('rapor.txt', { exact: true })).toBeVisible()
+    await page.goto(`/workspaces/${workspace.id}/files`)
+    await page.getByRole('button', { name: 'tree için işlemler', exact: true }).click()
+    const downloadEvent = page.waitForEvent('download')
+    await page.getByRole('menuitem', { name: 'ZIP olarak indir', exact: true }).click()
+    const download = await downloadEvent
+    const zipPath = await download.path()
+    expect(zipPath).not.toBeNull()
+    const entries = readFixtureZip(await readFile(zipPath!))
+    const expectedPaths = ['root-note.txt', 'nested/nested-note.txt', 'nested/derin/rapor.txt']
+    expect([...entries.keys()].filter((name) => !name.endsWith('/')).sort()).toEqual(
+      expectedPaths.map((name) => `tree/${name}`).sort(),
+    )
+    for (const relativePath of expectedPaths) {
+      expect(entries.get(`tree/${relativePath}`)).toEqual(
+        await readFile(fileURLToPath(new URL(`../fixtures/tree/${relativePath}`, import.meta.url))),
+      )
+    }
   } finally {
     await deleteWorkspace(owner.api, workspace.id)
     await owner.api.dispose()

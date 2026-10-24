@@ -1,139 +1,132 @@
-# Ortak Drive — Nuxt frontend
+# Ortak Drive · Frontend
 
-Drive benzeri arayüz, workspace bazlı roller ve dosya yönetimi için bağımsız Nuxt projesi. Eşlik eden API: [google-drive-clone-backend](https://github.com/ahmetkocdeveci/google-drive-clone-backend). İki depoyu aynı üst dizine klonlayarak birlikte çalıştırabilirsiniz.
+Birden fazla çalışma alanında dosya ve klasör paylaşmayı sağlayan Nuxt uygulaması. Her alanda Owner, Editor veya Viewer üyeliğiyle çalışılır. Ayrı Express API'si rol ve çalışma alanı sınırlarını her istekte uygular.
 
-## Çalıştırma
+## Bağlantılar
 
-Node.js **24.16 veya üzeri** ve pnpm kullanılır.
-
-```powershell
-cd google-drive-clone-frontend
-pnpm install
-Copy-Item .env.example .env # yalnız .env henüz yoksa
-pnpm dev
-```
-
-Yerel adres: `http://127.0.0.1:4179`. Gerçek API için [backend kurulumunu](https://github.com/ahmetkocdeveci/google-drive-clone-backend) da çalıştır.
-
-Owner çalışma alanı menüsündeki **İşlem geçmişi**, `/workspaces/:wid/activity` sayfasıdır. Gerçek API olaylarını en yeniden başlayarak yükler; daha eski kayıtlar, yenileme, boş/hata ve erişim kaybı durumlarını kapsar. Demo geçmişi yalnız o sekmede yapılan gerçek demo işlemlerinden oluşur; örnek geçmiş uydurulmaz.
-
-```powershell
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm generate
-pnpm preview:static
-```
-
-## Tarayıcı kabul testleri
-
-`tests/e2e` kayıt/e-posta doğrulama, parola kurtarma, Owner→Viewer daveti, UI ve doğrudan API rol/tenant kontrolleri, klavye ile dialog, gerçek upload/download, dar mobil gezinme ve axe WCAG A/AA taramalarını içerir. `pnpm test:e2e:types` bu kaynakların tip denetimidir; tarayıcı açmaz. Browser testleri bu çalışma ortamında önceki URL güvenlik politikası engeli nedeniyle **çalıştırılmadı**; görsel/erişilebilirlik kabulü tamamlanmış sayılmaz.
-
-Yetkili yerel/CI test ortamında:
-
-1. Backend dizininde `docker compose up -d` ile MongoDB/Mailpit'i başlat.
-2. Backend dizininde `node scripts/e2e-server.mjs --isolated-test-server` çalıştır. Bu komut4100 portunda yeni ve geçici test DB/deposu açar; normal API4100'ü önce durdur. Gerçek Google/SMTP dış servislerine bağlanmaz.
-3. Bu frontend dizininde `pnpm exec playwright install chromium` kurulumunu yap. `E2E_TEST_ENVIRONMENT=1` ortam değişkenini ayarla, sonra `pnpm test:e2e`. Playwright4179 frontend sunucusunu HTTP test API'sine bağlayarak açar; geliştirme frontend'i çalışıyorsa kapatıp test sunucusunun kendi ayarlarıyla açılmasına izin ver.
-4. Sonuç raporu `playwright-report/`; backend test sunucusunu durdurunca kendisine ait geçici DB/depo temizlenir. Başarısız zorla sonlandırmalarda geçici test DB'sini ayrıca incele.
-
-E2E hesap oluşturma yalnız loopback ortamında ve açık test bayrağıyla çalışır. Testler sentetik adresleri Mailpit'ten okur; gerçek e-posta alıcısına mesaj göndermez. Bu depodaki `.github/workflows/ci.yml` unit/tip/derleme/runtime ve Docker kontrollerini çalıştırır. Tarayıcı E2E ayrı, yetkili test ortamında yukarıdaki adımlarla yürütülmelidir.
-
-`build`, Nuxt üretim çıktısını üretir. `generate`, statik SPA çıktısını `.output/public` klasörüne yazar. Ardından `preview:static`, çıktıyı `http://127.0.0.1:4179` adresinde sunar. Bu script backend değildir; `/api` isteklerine açık backend-bağlı-değil hatası döndürür. Statik host bilinmeyen uygulama yollarını `index.html` dosyasına yönlendirmelidir; API yollarını bu fallback'e yönlendirmeyin. Giriş ve davet sayfalarını doğrudan açma bununla çalışır. `pnpm preview`, `build` sonrasında Nuxt üretim sunucusunu yerelde açar.
-
-Sürümler: Nuxt 4.6.2, Vue 3.5.44, Vue Router 5.4.0. Vue tip denetleyicisinin TypeScript 7 ile uyumsuzluğu nedeniyle desteklenen TypeScript 6.0.3 sabitlendi. pnpm lockfile ve `pnpm-workspace.yaml` saklanmalıdır; yalnız esbuild kurulum script'ine izin verilir.
-
-Cloudflare Pages için `pnpm build:pages`, `.pages-output/public` statik çıktısı ve aynı origin'deki API gateway Function'ı hazırlandı. [Pages kurulum ayarları](docs/cloudflare-pages.md).83 frontend testi, tip ve Pages artifact kontrolü geçti; gerçek yayın kabulü ayrıca gerekir.
-
-## Ekranlar
-
-| Yol | Ekran |
+| Kaynak | Adres |
 | --- | --- |
-| `/login` | E-posta/şifre ve Google giriş başlangıcı |
-| `/register` | Kayıt ve form doğrulama |
-| `/verify-email` | E-posta doğrulama |
-| `/forgot-password` | Genel yanıtla şifre yenileme bağlantısı isteme |
-| `/reset-password#token=...` | Tek kullanımlık bağlantıyla yeni şifre belirleme |
-| `/account` | Hesap güvenliği ve açık Google hesabı bağlama |
-| `/workspaces` | Alan seçme ve oluşturma |
-| `/workspaces/:wid/files` | Dosyalar, klasörler, arama, filtre, sıralama, liste/kart |
-| `/workspaces/:wid/files?folder=:id` | Alt klasör ve breadcrumb |
-| `/workspaces/:wid/files?recent=1` | Son kullanılanlar |
-| `/workspaces/:wid/members` | Üyeler, roller, sahiplik devri ve davetler |
-| `/workspaces/:wid/settings` | Ad/açıklama/renk ve alan silme |
-| `/invitations/accept#token=...` | Davet inceleme ve açık kabul |
+| Canlı uygulama | [ahmet-drive.pages.dev](https://ahmet-drive.pages.dev) |
+| Canlı API | [Northflank API](https://p01--google-drive-clone-backend--d7y2sxv84npc.code.run) |
+| API hazırlık kontrolü | [/health/ready](https://p01--google-drive-clone-backend--d7y2sxv84npc.code.run/health/ready) |
+| Frontend deposu | [google-drive-clone-frontend](https://github.com/ahmetkocdeveci/google-drive-clone-frontend) |
+| Backend deposu | [google-drive-clone-backend](https://github.com/ahmetkocdeveci/google-drive-clone-backend) |
+| Otomatik kontroller | [Frontend checks](https://github.com/ahmetkocdeveci/google-drive-clone-frontend/actions/workflows/ci.yml) |
 
-Owner yönetim ve içerik işlemlerine, Editor içerik işlemlerine, Viewer görüntüleme/indirmeye erişir. Roller workspace üyeliğine aittir. İçerik oluşturma, ad değiştirme, taşıma, çoklu silme, yükleme, indirme, klasör ZIP'i ve görsel/PDF önizlemesi bulunur. Rastgele HTML/SVG uygulama içinde render edilmez. Yükleniyor/hata/boş durumları, klavye erişimi ve mobil gezinme hazırlanmıştır.
+Depolar özeldir; kaynak koduna erişim için depo yetkisi gerekir. Korumalı API yollarını doğrudan açmak `403 EDGE_PROXY_REQUIRED` döndürür; uygulama aynı origin `/api/v1` gateway'ini kullanır.
 
-PDF önizleme PDF.js ile canvas'a çizilir; tarayıcının iframe PDF eklentisini gerektirmez. Önceki/sonraki sayfa kontrolleri vardır. Worker, CMap, font ve WASM kaynakları derlemeye dahil edilir. Yalnız yetkili API isteğiyle alınan aynı origin blob'u işlenir; PDF içindeki script, form ve linkler çalıştırılmaz. Parolalı veya bozuk PDF için indirme seçeneği sunulur. Canvas önizlemesinde metin seçme/arama katmanı henüz bulunmaz; özgün dosya indirilebilir. PDF testlerinde Node ortamının opsiyonel `@napi-rs/canvas` bağımlılığı kullanılır.
+## Özellikler ve roller
 
-Taşıma penceresi hedef klasörleri konum konum açar; aynı adlı klasörler üst yollarıyla ayırt edilir. Taşınan klasörün içine girilemez. Klasör yolu API ile aynı 64 seviye sınırına uyar. Sayfa kapanınca liste, önizleme, indirme, taşıma ve yükleme istekleri iptal edilir; sunucuda tamamlanmış işlemler iptalle geri alınmaz.
+- E-posta/parola ve Google ile giriş, kayıt, doğrulama, parola sıfırlama ve hesap güvenliği.
+- Alan oluşturma/seçme; e-posta davetleri, üyeler, roller ve sahiplik devri.
+- İç içe klasörler, breadcrumb, klasör yükleme, sürükle/bırak ve ZIP indirme.
+- Dosya yükleme/indirme, arama, filtre, sıralama, liste/kart görünümü ve son kullanılanlar.
+- Ad değiştirme, taşıma, çoklu silme; gerçek parent konumu ve **Klasöre git**.
+- Görsel ve çok sayfalı PDF önizleme; Owner için sayfalı işlem geçmişi.
+- Mobil gezinme, klavye ile pencereler ve yükleniyor/boş/hata durumları.
 
-Çalışma alanları, üyeler, davet geçmişi, dosyalar ve taşıma hedefleri cursor ile sayfalanır. “Daha fazla” düğmeleri sonraki sayfaları getirir; 500 dosya sınırında liste kesilmez. Veri veya yetki değişikliği eski cursor'u geçersiz kıldığında listeyi yenileme seçeneği gösterilir. Son Owner kontrolü backend'in tam üye sayımını kullanır.
+| Yetki | Owner | Editor | Viewer |
+| --- | :---: | :---: | :---: |
+| Görüntüleme, önizleme ve indirme | ✓ | ✓ | ✓ |
+| Dosya/klasör oluşturma, değiştirme ve silme | ✓ | ✓ | — |
+| Üye, davet, rol ve alan ayarları | ✓ | — | — |
+| İşlem geçmişi ve sahiplik devri | ✓ | — | — |
 
-Klasör ZIP'i arka planda hazırlanır. Durum kartında hazırlanan dosya sayısı, iptal ve yeniden deneme bulunur; hazırlama sırasında dosyalarla çalışmaya devam edilebilir. Hazır arşiv authenticated API üzerinden indirilir. Hazırlama takibinin zaman aşımı vardır; tamamlanmamış işler istemci iptalinde de sunucuda iptal edilmeye çalışılır.
+Dosya içeriğini uygulama içinde düzenleme kapsam dışıdır. Word/PowerPoint özgün biçimiyle indirilir; Office önizlemesi sunulmaz. SVG/HTML içeriği uygulama içinde çalıştırılmaz.
 
-## Demo ve gerçek API
+## Yerel kurulum
 
-`.env.example` gerçek API bağlantısını seçer. Dosyayı `.env` olarak kopyala:
+Node.js **24.19.0**, pnpm **11.25.0** kullanılır. API için Docker gerekir. Depoları kardeş dizinler olarak klonlayıp önce [backend kurulumunu](https://github.com/ahmetkocdeveci/google-drive-clone-backend#yerel-kurulum) tamamlayın.
+
+```sh
+git clone https://github.com/ahmetkocdeveci/google-drive-clone-frontend.git
+cd google-drive-clone-frontend
+pnpm install --frozen-lockfile
+```
+
+`.env.example` dosyasını, mevcut ayarların üzerine yazmadan `.env` olarak kopyalayın:
 
 ```dotenv
 NUXT_PUBLIC_DATA_MODE=http
 NUXT_PUBLIC_API_BASE=http://127.0.0.1:4100/api/v1
 ```
 
-`http` modu için backend4100 ve frontend4179 birlikte çalışır. Uygulamada kayıt ol; doğrulama mesajını `http://127.0.0.1:8025` yerel test kutusunda aç. Süresi dolmuş bağlantı doğrulama ekranından yeniden istenebilir. Google ve gerçek SMTP/S3 ayarlarının durumu backend README'de açıklanır.
+`pnpm dev` ile frontend `http://127.0.0.1:4179` adresinde açılır. API `4100` portundadır. Kayıt sonrası doğrulama e-postasını `http://127.0.0.1:8025` Mailpit kutusunda açın. Google girişi yalnız backend'de yapılandırıldığında görünür. Origin ayarlarında `localhost` ile `127.0.0.1` adreslerini karıştırmayın.
 
-Görsel demo için `NUXT_PUBLIC_DATA_MODE=demo` açıkça seçilebilir. `.env` olmadan da varsayılan gerçek HTTP API'dir (`/api/v1`); üretimde bu yol backend'e yönlendirilmelidir. Geçersiz bir mod uygulamayı hata ile durdurur; örnek hesaba sessizce geçilmez. Demo tarayıcıdaki JavaScript belleğinde çalışır. Başlangıçta Ahmet hesabının oturumu açıktır. Üç örnek alan Owner, Editor ve Viewer rollerini gösterir. Çıkış yapıp tekrar girmek için `ahmet@example.com` / `Demo1234!` kullanılır. Bu örnek parola gerçek API hesabı değildir.
+### Açık demo modu
 
-Demo kaydı ve e-posta doğrulaması simülasyondur; gerçek e-posta/Google OAuth işlemi yapılmaz. Demo doğrulama düğmesi yalnız demo modunda görünür. `/invitations/accept` sayfasında örnek davet denenebilir.
+`NUXT_PUBLIC_DATA_MODE=demo` yalnız arayüz denemesi içindir. Örnek giriş: `ahmet@example.com` / `Demo1234!`. Veriler ve yüklenen baytlar sekmenin belleğinde tutulur, yenilemede sıfırlanır. Gerçek Google/SMTP, kalıcı veri veya güvenli tenant sınırı sağlamaz. HTTP hatasında sessizce demo moduna geçilmez.
 
-Yüklenen dosyanın gerçek baytları **bu sekmenin belleğinde** tutulur ve indirilebilir; demo limiti dosya başına 25 MB'dir. Sayfa yenilenince tüm demo değişiklikleri sıfırlanır. Kalıcı depolama, güvenli hesap/parola sistemi veya gerçek tenant sınırı sağladığı iddia edilmez.
+## Test ve kod düzeni
 
-HTTP servis adapter'ı [API sözleşmesini](docs/api-contract.md) uygulayan kardeş backend'e bağlanır. Gerçek API hataları gösterilir; HTTP modu başarısız olursa demo verisine sessiz geçilmez. CSRF anahtarı geçersizse backend'in işlemden önce döndürdüğü açık hatadan sonra yalnız bir kez yenilenip tekrar denenir; ağ hatalarında yazma işlemi otomatik tekrarlanmaz.
-
-## Mimari ve güven sınırı
-
-```text
-app/components/    Ortak pencereler, dosya alanı, önizleme
-app/composables/   Session/workspace durumu, bildirimler
-app/layouts/       Auth, alan seçimi ve workspace yerleşimi
-app/middleware/    Giriş/e-posta ve workspace route kontrolleri
-app/pages/         Nuxt sayfaları
-app/plugins/       Demo veya HTTP servis seçimi
-app/services/      DriveApi, demo ve gerçek HTTP adapter'ları
-shared/            DTO tipleri ve yetki matrisi
-tests/             Domain ve HTTP adapter testleri
+```sh
+pnpm format:check
+pnpm test
+pnpm typecheck
+pnpm test:e2e:types
+pnpm build
+pnpm check:dependencies
+pnpm build:pages
 ```
 
-UI kontrolleri backend yetkilendirmesinin yerine geçmez. HTTP backend her istekte session, güncel üyelik, permission ve kaynak workspace sınırını uygulamalıdır. Frontend workspace değişiminde içerik durumunu temizler, liste isteklerini iptal eder ve geç gelen sonuçları kapsam kontrolüyle reddeder.
+`format:check`, Vue/TypeScript/CSS ve testlerin ortak Prettier biçimini denetler; `pnpm format` düzenler. Birim testleri HTTP adaptörü, oturum yarışları, rol/alan değişimi, klasör aktarımı, PDF ve gateway'i kapsar. `test:e2e:types` yalnız tarayıcı test kaynaklarının tip kontrolüdür.
 
-Session/CSRF token'ları localStorage veya sessionStorage'a yazılmaz. Cookie oturumları backend tarafından HttpOnly/Secure/SameSite olarak ayarlanmalıdır. Davet ve doğrulama token'ları fragmentten okunup URL'den kaldırılır, yalnız bellekte tutulur. Google girişi CSRF korumalı POST ile başlar. Bekleyen davet, backend'de 10 dakika geçerli, session/state'e bağlı şifreli OAuth kaydında korunur; callback fragment ile davet ekranına döner. Kullanıcı daveti ayrıca inceleyip kabul eder. İptal/yeniden deneme de daveti korur; tarayıcı depolaması veya Google URL'sine davet tokenı yazılmaz.
+Gerçek tarayıcı testleri CI'daki **browser** işindedir. İş backend `main` dalını salt okunur deploy key ile kardeş dizine alır; kendi MongoDB/Mailpit ve geçici DB/deposuyla Chromium'u başlatır. Canlı kullanıcı verisi, Google hesabı veya gerçek alıcılara SMTP kullanılmaz. Rapor ve hata ekran görüntüleri Actions artifact'ında 7 gün tutulur; trace/video kapalıdır. Backend değiştiğinde iş `workflow_dispatch` ile yeniden çalıştırılabilir. Fork PR'larında özel backend erişimi olmadığı için browser işi atlanır.
 
-Davet ve doğrulama ekranlarındaki “Başka hesapla giriş yap” düğmesi bekleyen bağlantıyı bellekte tutarak hesabı değiştirir. Genel çıkış düğmesi bekleyen bağlantıları da temizler. Yeni bir doğrulama tokenı açıldıysa, mevcut hesabın daha önce doğrulanmış olması bu bağlantıyı doğrulanmış saymaz; token API'de açıkça doğrulanır.
+Yetkili, ayrı bir yerel test ortamında:
 
-Sekmeye geri dönüldüğünde oturum bir kez yenilenir. Böylece e-posta başka sekmede doğrulanmışsa eski sekmedeki davet bağlantısı bellekte kalır ve doğrulama durumu güncellenir. Başka bir sekmede hesap değişmişse önceki workspace ve içerik durumu temizlenir; gecikmiş yanıtlar yeni oturumu değiştiremez. Arka planda periyodik sorgu yapılmaz.
+1. Normal geliştirme sunucularının `4100/4179` portlarını boşaltın.
+2. Backend'de `docker compose up -d` ve `node scripts/e2e-server.mjs --isolated-test-server` çalıştırın.
+3. Frontend'de `pnpm exec playwright install chromium` çalıştırın.
+4. `E2E_TEST_ENVIRONMENT=1` ayarlayıp `pnpm test:e2e` çalıştırın. PowerShell: `$env:E2E_TEST_ENVIRONMENT='1'`.
+5. Rapor `playwright-report/` altındadır. Test API'si normal kapanışta kendi geçici DB/deposunu temizler.
 
-Şifre yenileme talebi hesabın varlığını açıklamaz. Bağlantı fragmentten okunur ve yalnız bellekte tutulur; başarı tüm eski oturumları kapatıp yeni şifreyle giriş ister. Şifreler tarayıcı depolamasına yazılmaz. Hesap güvenliği sayfasındaki Google bağlama işlemi açık onay ve şifreli hesaplarda mevcut şifre ister; e-posta eşleşmesi hesapları kendiliğinden birleştirmez.
+Senaryolar kayıt/doğrulama, parola sıfırlama, Viewer daveti, UI/API rol ve tenant reddi, iç içe klasör aktarımı, gerçek baytlarla indirme, görsel/PDF, klavye, dar mobil ekran ve axe WCAG A/AA taramalarını içerir. axe taraması tam erişilebilirlik sertifikası değildir. Google sağlayıcısıyla canlı giriş ayrıca manuel kabul gerektirir.
 
-MongoDB, API güvenliği, audit, worker ve SMTP backend'de uygulanır. Yerel uygulama gerçek Atlas/R2, Google OAuth ve Gmail SMTP ile yapılandırıldı. Kullanıcı PDF yükleme/önizleme/indirme, workspace ayrımı, davet, Viewer/Editor ve üyelik iptali kontrollerini; ayrıca kendi Gmail adresine test mesajı teslimatını doğruladı. Çevrimiçi deployment henüz yapılmadı. [Mimari tasarım](docs/google-drive-multi-tenant-mimari.md).
+## Canlı yayın
 
-Referanslar: [Nuxt static deployment](https://github.com/nuxt/nuxt/blob/main/docs/1.getting-started/16.deployment.md), [pnpm ayarları](https://pnpm.io/settings).
+Frontend **Cloudflare Pages**, API ve private MongoDB **Northflank**, dosyalar **Cloudflare R2** üzerindedir. Bilgisayarın açık kalması gerekmez.
 
-Üretim Docker imajı yalnız `.output` taşır. `pnpm check:runtime` (önce `pnpm build`) bilinen iki sorunlu araç zinciri paketinin runtime'a girmesini engeller; CI ve Docker derlemesine bağlıdır. 23 Ekim taramasında Nuxt 4.6.2 güncellemesi sonrası 0 moderate ve 2 high bulgu kaldı. Yaması henüz bildirilmeyen `node-forge` ve `braces` araç zinciri bulguları izleniyor. [Güvenlik durumu ve resmi kaynaklar](docs/bagimlilik-guvenlik-durumu.md).
+| Pages ayarı | Değer |
+| --- | --- |
+| Production branch | `main` |
+| Framework preset | None / özel build |
+| Build command | `pnpm build:pages` |
+| Build output directory | `.pages-output/public` |
+| Root directory | Repo kökü |
+| Node / pnpm | `NODE_VERSION=24.19.0`, `PNPM_VERSION=11.25.0` |
 
+Function: `PUBLIC_APP_ORIGIN=https://ahmet-drive.pages.dev`, `UPSTREAM_API_ORIGIN=<Northflank HTTPS origin>` ve backend ile aynı `EDGE_PROXY_TOKEN` **Secret**. Bu değerler tarayıcı paketine konmaz. `/api/*` Function'a, diğer yollar statik SPA'ya gider; API yanıtları cache'lenmez. Google callback'i `https://ahmet-drive.pages.dev/api/v1/auth/google/callback` adresidir. [Pages rehberi](docs/cloudflare-pages.md).
 
-## Klasör yükleme ve dosyanın konumu
+`pnpm build` Node sunucusu için `.output` üretir; `pnpm preview` yerelde açar. `generate` / `preview:static` yalnız statik arayüzdür, tek başına API sağlamaz. Pages üretimi ayrı `.nuxt-pages` / `.pages-output` dizinlerini kullanır.
 
-Owner ve Editor, Dosyalar ekranındaki **Klasör yükle** düğmesinden yerel klasör seçebilir. Alt klasörler ve dosyalar seçili konumda yeniden oluşturulur. Klasörü sürükleyip bırakmak da desteklenir; entry API'sini destekleyen tarayıcılar boş dizinleri de aktarır. Directory dosya seçicisi boş dizinleri bildirmez.
+## Mimari
 
-Sınırlar:10000 toplam öğe, hedef yol dahil64 seviye, dosya başına25 MiB; workspace kotası API tarafından korunur. Aktarım atomik değildir: hata/iptalde tamamlanan öğeler kalır. Tekrar yükleme yeni bir kök klasör oluşturur; otomatik birleştirme yapılmaz.
+```text
+app/components/    Dosya alanı, pencereler ve önizleme
+app/composables/   Oturum, alan ve bildirim durumu
+app/layouts/       Giriş, alan seçimi ve alan düzeni
+app/middleware/    Giriş ve üyelik yönlendirmeleri
+app/pages/         Uygulama ekranları
+app/services/      DriveApi, HTTP ve bellek içi demo adaptörleri
+shared/            DTO tipleri ve yetki matrisi
+functions/api/     Cloudflare Pages gateway
+tests/             Birim ve tarayıcı senaryoları
+```
 
-Dosya ayrıntılarındaki **Bulunduğu klasör**, gerçek parent yolunu gösterir. **Klasöre git** arama/son kullanılanlardan da doğru konumu açar. Eski hesap/workspace'e ait geç gelen konum sonuçları yayınlanmaz.
+Başlıca yollar: `/login`, `/register`, `/verify-email`, `/forgot-password`, `/reset-password`, `/account`, `/workspaces`, `/workspaces/:wid/files`, `/workspaces/:wid/members`, `/workspaces/:wid/activity`, `/workspaces/:wid/settings`, `/invitations/accept`.
 
-22 Ekim son kontrolleri: PDF renderer dahil68 frontend testi, Nuxt tip, E2E kaynak tip, üretim derlemesi ve runtime paket kontrolü geçti. Daha önce nested upload/Viewer reddi dahil2 gerçek API/MongoDB entegrasyon testi geçti. Kullanıcı yerel PDF, workspace ve rol kontrollerini manuel tamamladı; otomatik tarayıcı/erişilebilirlik senaryoları bu ortamda çalıştırılmadı.
+HTTP adaptörü [API sözleşmesini](docs/api-contract.md) kullanır. Alan/hesap değişiminde istekler iptal edilir, eski sonuçlar kapsam kontrolüyle reddedilir. Sekmeye dönüşte güncel üyelik okunur; yetki kaybında içerik ve yönetim kontrolleri kapatılır. UI kontrolü backend yetkilendirmesinin yerine geçmez.
 
-23 Ekim davet düzeltmesi: Google dönüşünde daveti tekrar yapıştırma gereksinimi kaldırıldı. 73 frontend testi ve Nuxt tip kontrolü geçti; backend'in 28 hedefli auth testinde session/state bağı, süre, replay, iptal, açık kabul ve CSRF doğrulandı. Yeni akışın manuel Google dönüşü kabulü ayrıca bekliyor.
+Oturum, CSRF ve davet tokenları localStorage/sessionStorage'a yazılmaz. Bağlantı tokenları fragmentten alınıp URL'den temizlenir. Google dönüşündeki davet backend'de şifreli ve session/state'e bağlı korunur; kullanıcı dönüşte ayrıca kabul eder. Genel çıkış bekleyen bağlantı durumunu temizler.
 
-23 Ekim son yerel doğrulaması: Nuxt 4.6.2 üretim derlemesi, E2E kaynak tip kontrolü ve 21 manifest runtime sınırı kontrolü geçti; node-forge/braces üretim çıktısında bulunmadı. İlk derleme Windows EPERM nedeniyle durdu, aynı derleme gerekli izinlerle başarılı oldu. Outbox 0 pending/0 sending/0 failed iken backend yeni kodla yeniden başlatıldı; Atlas /health ok ve frontend 4179 dinleme kontrolü başarılı. Bu kontroller frontend sayfasını açma veya yeni Google akışının manuel kabulü değildir.
+## Sınırlar ve bağımlılıklar
 
-23 Ekim ek oturum düzeltmesi: Davet kabulü veya alan listesi yenilenirken hesap/oturum değişirse eski sonuç reddedilir; yeni hesabın listesi ve bekleyen daveti korunur. Davet sayfası kapandıktan veya token değiştikten sonra eski yanıt yönlendirme yapmaz. Geçerli oturumda yalnız liste yenileme başarısızsa kabul edilmiş davet başarıyla tamamlanır. Dört hesap/oturum yarışı ve normal hata toparlama dahil **78/78 test**, Nuxt tip, E2E kaynak tip, üretim derlemesi ve 21 manifest runtime kontrolü geçti. Bu sonuç otomatik tarayıcı kabulü değildir.
+Nuxt **4.6.2**, Vue **3.5.44**, Vue Router **5.4.0**, TypeScript **6.0.3** ve PDF.js **6.4.299** sabitlenmiştir. Lockfile korunur; TypeScript 6 mevcut Vue tip araçlarıyla uyumludur.
+
+- PDF, iframe yerine PDF.js canvas'ına çizilir; çok sayfa, worker/font/CMap/WASM dağıtıma dahildir. Parolalı/bozuk PDF için indirme sunulur. Metin seçme/arama katmanı yoktur.
+- Dosya **25 MiB**, alan **5 GiB**, yol **64 seviye**, klasör aktarımı **10.000 öğe**. Dosya seçicisi boş klasörleri bildirmez; destekleyen sürükle/bırak API'si aktarır.
+- Aktarım atomik değildir; hata/iptal öncesi tamamlanan öğeler kalır. Tekrar yükleme yeni kök oluşturur. Büyük ZIP'in son indirmesi tarayıcı belleğine bağlıdır.
+- 24 Ekim taramasında `node-forge@1.4.0` için **1 high, henüz yamasız araç zinciri uyarısı** kalmıştır. Paket üretim runtime'ından dışlanır. `check:dependencies`, runtime sınırını kontrol edip yalnız bu bildirimin tam derleme yoluna izin verir; yeni bildirim/farklı yol/yayımlanan yama kontrolü durdurur. Bu sıfır açık anlamına gelmez. [Güvenlik kaydı](docs/bagimlilik-guvenlik-durumu.md).
+
+[Teslim kontrolü](docs/release-checklist.md)

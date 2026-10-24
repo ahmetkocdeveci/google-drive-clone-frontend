@@ -97,6 +97,10 @@ function toggleSelection(id: string) {
   else next.add(id)
   selection.value = next
 }
+function clearFilters() {
+  emit('search', '')
+  emit('filter', 'all')
+}
 
 function selectAll() {
   selection.value = allSelected.value ? new Set() : new Set(props.nodes.map((node) => node.id))
@@ -706,10 +710,7 @@ onBeforeUnmount(() => {
         v-if="query || filter !== 'all'"
         class="outline-button"
         type="button"
-        @click="
-          emit('search', '')
-          emit('filter', 'all')
-        "
+        @click="clearFilters"
       >
         Filtreleri temizle
       </button>

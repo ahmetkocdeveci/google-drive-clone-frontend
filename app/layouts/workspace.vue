@@ -63,6 +63,10 @@ function closeMenus() {
   if (switcher.value) switcher.value.open = false
   if (newMenu.value) newMenu.value.open = false
 }
+function startWorkspaceCreation() {
+  creating.value = true
+  closeMenus()
+}
 function closeSidebar() {
   const restoreFocus = mobile.value && sidebarOpen.value
   sidebarOpen.value = false
@@ -223,13 +227,7 @@ onBeforeUnmount(() => {
             }}</button
           ><NuxtLink to="/workspaces"
             >Tüm çalışma alanları<AppIcon name="arrow" :size="15" /></NuxtLink
-          ><button
-            class="new-workspace-option"
-            @click="
-              creating = true
-              closeMenus()
-            "
-          >
+          ><button class="new-workspace-option" @click="startWorkspaceCreation">
             <AppIcon name="plus" :size="18" />Yeni çalışma alanı
           </button>
         </div>

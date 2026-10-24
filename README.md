@@ -71,7 +71,7 @@ pnpm build:pages
 
 `format:check`, Vue/TypeScript/CSS ve testlerin ortak Prettier biçimini denetler; `pnpm format` düzenler. Birim testleri HTTP adaptörü, oturum yarışları, rol/alan değişimi, klasör aktarımı, PDF ve gateway'i kapsar. `test:e2e:types` yalnız tarayıcı test kaynaklarının tip kontrolüdür.
 
-Gerçek tarayıcı testleri CI'daki **browser** işindedir. İş backend `main` dalını salt okunur deploy key ile kardeş dizine alır; kendi MongoDB/Mailpit ve geçici DB/deposuyla Chromium'u başlatır. Canlı kullanıcı verisi, Google hesabı veya gerçek alıcılara SMTP kullanılmaz. Rapor ve hata ekran görüntüleri Actions artifact'ında 7 gün tutulur; trace/video kapalıdır. Backend değiştiğinde iş `workflow_dispatch` ile yeniden çalıştırılabilir. Fork PR'larında özel backend erişimi olmadığı için browser işi atlanır.
+Gerçek tarayıcı testleri CI'daki **browser** işindedir. İş backend `main` dalını salt okunur deploy key ile kardeş dizine alır; kendi MongoDB/Mailpit ve geçici DB/deposuyla Chromium'u başlatır. Tarayıcıdan önce backend'in iki gerçek frontend HTTP adapter entegrasyon testi de bu ortamda çalışır. Canlı kullanıcı verisi, Google hesabı veya gerçek alıcılara SMTP kullanılmaz. Rapor ve hata ekran görüntüleri Actions artifact'ında 7 gün tutulur; trace/video kapalıdır. Backend değiştiğinde iş `workflow_dispatch` ile yeniden çalıştırılabilir. Fork PR'larında özel backend erişimi olmadığı için browser işi atlanır.
 
 Yetkili, ayrı bir yerel test ortamında:
 

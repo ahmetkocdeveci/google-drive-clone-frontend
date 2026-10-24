@@ -35,18 +35,18 @@ jobs:
     timeout-minutes: 20
     defaults:
       run:
-        working-directory: frontend
+        working-directory: google-drive-clone-frontend
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
-          path: frontend
+          path: google-drive-clone-frontend
           persist-credentials: false
       - name: Check out the companion API with read-only access
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           repository: ahmetkocdeveci/google-drive-clone-backend
           ref: main
-          path: backend
+          path: google-drive-clone-backend
           ssh-key: ${{ secrets.E2E_BACKEND_SSH_KEY }}
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
@@ -55,13 +55,13 @@ jobs:
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
         with:
           version: '11.25.0'
-          package_json_file: frontend/package.json
+          package_json_file: google-drive-clone-frontend/package.json
       - run: pnpm install --frozen-lockfile
       - run: pnpm install --frozen-lockfile
-        working-directory: backend
+        working-directory: google-drive-clone-backend
       - run: pnpm exec playwright install --with-deps chromium
       - name: Start isolated MongoDB and Mailpit
-        working-directory: backend
+        working-directory: google-drive-clone-backend
         run: |
           echo "Companion API revision: $(git rev-parse HEAD)"
           docker compose up -d
@@ -70,8 +70,11 @@ jobs:
             sleep 2
           done
           exit 1
+      - name: Run companion API adapter integration tests
+        working-directory: google-drive-clone-backend
+        run: node --experimental-strip-types --test tests/frontend-integration.test.mjs
       - name: Start a temporary test API
-        working-directory: backend
+        working-directory: google-drive-clone-backend
         run: |
           node scripts/e2e-server.mjs --isolated-test-server >"$RUNNER_TEMP/drive-e2e-api.log" 2>&1 &
           echo "DRIVE_E2E_PID=$!" >> "$GITHUB_ENV"
@@ -87,7 +90,7 @@ jobs:
           E2E_TEST_ENVIRONMENT: '1'
       - name: Stop temporary services
         if: always()
-        working-directory: backend
+        working-directory: google-drive-clone-backend
         run: |
           if [ -n "${DRIVE_E2E_PID:-}" ]; then kill -TERM "$DRIVE_E2E_PID" 2>/dev/null || true; fi
           for attempt in $(seq 1 10); do
@@ -101,8 +104,8 @@ jobs:
         with:
           name: browser-report
           path: |
-            frontend/playwright-report/
-            frontend/test-results/
+            google-drive-clone-frontend/playwright-report/
+            google-drive-clone-frontend/test-results/
             ${{ runner.temp }}/drive-e2e-api.log
           retention-days: 7
           if-no-files-found: ignore
